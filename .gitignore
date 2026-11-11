@@ -1,0 +1,41 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js Build
+.next/
+out/
+build/
+dist/
+
+# Entornos y Credenciales
+.env
+.env*.local
+.env.local
+.env.production
+.env.development
+*.pem
+*.key
+
+# Supabase Local
+back/supabase/.branches/
+back/supabase/.temp/
+
+# Logs y Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Sistema Operativo / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
