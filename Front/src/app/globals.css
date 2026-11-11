@@ -3,66 +3,171 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 241, 245, 249;
-  --background-start-rgb: 11, 14, 20;
-  --background-end-rgb: 17, 22, 34;
+  --foreground: #FFFFFF;
+  --background: #050811;
+  --neon-blue: #00D2FF;
+  --ice-blue: #7DD3FC;
+  --magenta: #FF007F;
+  --gold: #FBBF24;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #0B0E14;
+  color: var(--foreground);
+  background-color: var(--background);
   min-height: 100vh;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  overflow-x: hidden;
 }
 
-/* Scrollbar personalizado Gaming */
+/* Cyber Grid Background */
+.bg-cyber-grid-pattern {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(0, 210, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 210, 255, 0.05) 1px, transparent 1px);
+}
+
+/* Paneles Rectangulares Negros Opacos con Bordes Azul Neón (Spec) */
+.cyber-panel {
+  background-color: rgba(6, 9, 19, 0.92);
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  box-shadow: 0 0 18px -2px rgba(0, 210, 255, 0.15), inset 0 0 20px -5px rgba(0, 210, 255, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.cyber-panel:hover {
+  border-color: rgba(0, 210, 255, 0.6);
+  box-shadow: 0 0 22px -1px rgba(0, 210, 255, 0.25), inset 0 0 25px -4px rgba(0, 210, 255, 0.08);
+}
+
+/* Panel con borde Magenta/Fucsia */
+.cyber-panel-magenta {
+  background-color: rgba(6, 9, 19, 0.92);
+  border: 1px solid rgba(255, 0, 127, 0.35);
+  box-shadow: 0 0 18px -2px rgba(255, 0, 127, 0.15);
+  backdrop-filter: blur(12px);
+}
+
+/* Botones en forma de Píldora con Resplandor Azul Eléctrico (Spec) */
+.btn-neon-pill {
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #00D2FF 0%, #0070F3 100%);
+  color: #FFFFFF;
+  box-shadow: 0 0 22px 2px rgba(0, 210, 255, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease-in-out;
+}
+
+.btn-neon-pill:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 32px 5px rgba(0, 210, 255, 0.75), inset 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+/* Botón secundario Azul Hielo */
+.btn-ice-pill {
+  border-radius: 9999px;
+  background: rgba(6, 9, 19, 0.85);
+  border: 1px solid rgba(125, 211, 252, 0.5);
+  color: #E0F2FE;
+  box-shadow: 0 0 15px rgba(125, 211, 252, 0.25), inset 0 0 12px rgba(125, 211, 252, 0.15);
+  transition: all 0.25s ease-in-out;
+}
+
+.btn-ice-pill:hover {
+  background: rgba(14, 23, 56, 0.9);
+  border-color: #00D2FF;
+  color: #FFFFFF;
+  box-shadow: 0 0 22px rgba(0, 210, 255, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Botón Fucsia/Magenta Píldora */
+.btn-magenta-pill {
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #FF007F 0%, #C00060 100%);
+  color: #FFFFFF;
+  box-shadow: 0 0 22px 2px rgba(255, 0, 127, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease-in-out;
+}
+
+.btn-magenta-pill:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 32px 5px rgba(255, 0, 127, 0.75);
+}
+
+/* Escarcha / Nieve acumulada en la parte superior (Frost Snow Cap) */
+.snow-cap {
+  position: relative;
+}
+
+.snow-cap::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 10%;
+  right: 10%;
+  height: 6px;
+  background: linear-gradient(180deg, #FFFFFF 0%, rgba(125, 211, 252, 0.6) 80%, transparent 100%);
+  border-radius: 10px 10px 0 0;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+  pointer-events: none;
+}
+
+/* Animación sutil de copos de nieve flotantes */
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) translateX(0);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 0.8;
+  }
+
+  85% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(105vh) translateX(25px);
+    opacity: 0;
+  }
+}
+
+.snowflake {
+  position: fixed;
+  top: -20px;
+  color: #FFFFFF;
+  pointer-events: none;
+  z-index: 20;
+  user-select: none;
+  animation-name: snowfall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Scrollbar Cyber Invernal */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0E14;
+  background: #050811;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1F293D;
+  background: #0A1128;
+  border: 1px solid rgba(0, 210, 255, 0.3);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #FF4655;
+  background: #00D2FF;
+  box-shadow: 0 0 10px #00D2FF;
 }
 
-/* Efecto de brillo de borde gamer */
-.glow-border {
-  position: relative;
-}
-
-.glow-border::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(255, 70, 85, 0.4), rgba(255, 183, 3, 0.2), rgba(0, 245, 212, 0.2));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Animación sutil para burbujas flotantes de reseñas en el Hero */
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-  100% { transform: translateY(0px); }
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float 5s ease-in-out 1.5s infinite;
+/* Rayos de neón decorativos */
+.neon-lightning {
+  background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.6), transparent);
+  filter: drop-shadow(0 0 8px #00D2FF);
 }

@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { AlertOctagon, RotateCcw, Home } from 'lucide-react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 
 export default function GlobalError({
@@ -12,39 +11,42 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Error no controlado a nivel raíz:', error);
+    console.error('Global application error:', error);
   }, [error]);
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full p-8 rounded-2xl bg-surface-card border border-rose-500/30 text-center shadow-glow-red">
-        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
-          <AlertOctagon className="w-8 h-8" />
+    <div className="min-h-[70vh] flex items-center justify-center p-6">
+      <div className="cyber-panel p-8 md:p-12 rounded-2xl max-w-lg w-full text-center border-neon/40 shadow-neon">
+        <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-magenta/15 border border-magenta flex items-center justify-center text-magenta shadow-[0_0_25px_rgba(255,0,127,0.4)]">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
-        <h2 className="text-2xl font-black text-white mb-2">
-          ¡Ups! Algo no salió como esperábamos
+        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-mono uppercase bg-neon/15 text-neon border border-neon/30 mb-3">
+          Error de Renderizado
+        </span>
+        <h2 className="text-2xl font-black text-pure tracking-wider uppercase mb-2">
+          Interferencia de Señal
         </h2>
-        <p className="text-sm text-slate-400 mb-6">
-          Se ha producido una excepción imprevista. El sistema de protección aislada evitó que la aplicación se congele.
+        <p className="text-sm text-ice/80 mb-6 font-mono leading-relaxed">
+          Ha ocurrido un error inesperado al procesar la solicitud. Nuestro protocolo de aislamiento ha contenido el incidente.
         </p>
-
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={() => reset()}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-brand-primary hover:bg-brand-hover transition-colors shadow-glow-red"
+            className="btn-ice-pill px-6 py-3 text-xs font-bold uppercase tracking-wider"
           >
-            <RotateCcw className="w-4 h-4" />
-            Reintentar
+            Reintentar Acción
           </button>
           <Link
             href="/"
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-300 bg-surface-hover hover:bg-surface-border transition-colors border border-slate-700"
+            className="btn-neon-pill px-6 py-3 text-xs font-bold uppercase tracking-wider inline-flex items-center justify-center"
           >
-            <Home className="w-4 h-4" />
-            Volver al Inicio
+            Regresar al Home
           </Link>
         </div>
       </div>
     </div>
   );
 }
+

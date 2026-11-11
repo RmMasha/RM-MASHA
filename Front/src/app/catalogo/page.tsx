@@ -1,75 +1,138 @@
-import React from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Category } from '@/types/database.types';
-import { Gem, ArrowRight, ShieldCheck, Flame } from 'lucide-react';
+import { Category, Product } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
 
-async function getCategories(): Promise<Category[]> {
+export default async function CatalogoGeneralPage() {
+  const supabase = createClient();
+
+  let categories: Category[] = [];
+  let featuredProducts: (Product & { subcategories?: { nombre: string; categories?: { nombre: string; slug: string } } })[] = [];
+
   try {
-    const supabase = createClient();
-    const { data } = await supabase
+    const { data: catData } = await supabase
       .from('categories')
       .select('*')
       .eq('activo', true)
       .order('orden', { ascending: true });
+    if (catData) categories = catData;
 
-    return (data as Category[]) || [];
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    return [];
+    const { data: prodData } = await supabase
+      .from('products')
+      .select('*, subcategories(nombre, categories(nombre, slug))')
+      .eq('activo', true)
+      .limit(8);
+    if (prodData) featuredProducts = prodData as any;
+  } catch (err) {
+    console.error('Error fetching catalog data:', err);
   }
-}
-
-export default async function CatalogoPage() {
-  const categories = await getCategories();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* HEADER */}
-      <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary text-xs font-bold">
-          <Flame className="w-4 h-4 fill-brand-primary" />
-          <span>CATÁLOGO COMPLETO</span>
+    <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
+      {/* Miga de Pan (Breadcrumb) */}
+      <nav className="flex items-center gap-2 text-xs font-mono text-ice/60 mb-6">
+        <Link href="/" className="hover:text-neon transition-colors">Inicio</Link>
+        <span>/</span>
+        <span className="text-pure font-bold">Catálogo General</span>
+      </nav>
+
+      {/* Cabecera de Página con Temática Navideña */}
+      <div className="cyber-panel rounded-3xl p-6 md:p-10 mb-10 border-neon/30 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-neon/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="max-w-2xl relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/10 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-3">
+            <span>❄</span> Catálogo Oficial RM & Masha
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black text-pure uppercase tracking-wider">
+            Explora Nuestras <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon via-ice to-white">Categorías</span>
+          </h1>
+          <p className="text-xs md:text-sm text-ice/80 font-mono mt-2 leading-relaxed">
+            Navegación por niveles aislados. Selecciona tu juego o categoría para ver las subcategorías y paquetes de recarga disponibles.
+          </p>
         </div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
-          Selecciona tu Juego o Servicio
-        </h1>
-        <p className="text-sm sm:text-base text-slate-400">
-          Navega paso a paso por nuestro catálogo jerárquico aislado para recargas oficiales con entrega instantánea.
-        </p>
       </div>
 
-      {/* CATEGORIES GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories.map((cat) => (
-          <Link
-            key={cat.id}
-            href={`/catalogo/${cat.slug}`}
-            className="group rounded-3xl bg-surface-card border border-surface-border p-7 hover:border-brand-primary/60 transition-all hover:scale-[1.02] shadow-xl flex flex-col justify-between glow-border"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-accent flex items-center justify-center text-white shadow-glow-red group-hover:rotate-6 transition-transform">
-                <Gem className="w-7 h-7" />
-              </div>
-              <h2 className="text-2xl font-black text-white group-hover:text-brand-primary transition-colors">
-                {cat.nombre}
-              </h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                {cat.descripcion || 'Servicios y recargas directas con los mejores precios del mercado.'}
-              </p>
-            </div>
+      {/* Cuadrícula de Categorías (Nivel 1) */}
+      <div className="mb-14">
+        <h2 className="text-xl font-bold uppercase tracking-wider text-pure mb-6 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+          Categorías Principales
+        </h2>
 
-            <div className="pt-6 mt-6 border-t border-surface-border flex items-center justify-between text-xs font-bold text-slate-300 group-hover:text-white">
-              <span>Ver subcategorías</span>
-              <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                <ArrowRight className="w-4 h-4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {categories.map((cat, idx) => (
+            <Link
+              key={cat.id || cat.categoria_id}
+              href={`/catalogo/${cat.slug}`}
+              className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-neon group-hover:scale-105 transition-transform">
+                  {idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'}
+                </div>
+                <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
+                  {cat.nombre}
+                </h3>
+                <p className="text-xs text-ice/70 font-mono leading-relaxed line-clamp-2">
+                  {cat.descripcion || 'Entregas instantáneas y soporte garantizado.'}
+                </p>
               </div>
-            </div>
-          </Link>
-        ))}
+
+              <div className="pt-4 mt-6 border-t border-neon/15 flex items-center justify-between text-xs font-mono">
+                <span className="text-ice/70">Nivel 1 de Catálogo</span>
+                <span className="text-neon font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                  Abrir →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
+
+      {/* Productos Destacados Rápidos */}
+      {featuredProducts.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold uppercase tracking-wider text-pure mb-6 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-magenta shadow-[0_0_8px_#FF007F]" />
+            Productos Más Solicitados
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((prod) => (
+              <div
+                key={prod.id || prod.producto_id}
+                className="cyber-panel rounded-2xl p-5 flex flex-col justify-between hover:border-magenta/50 transition-colors"
+              >
+                <div>
+                  <div className="text-[10px] font-mono uppercase text-neon tracking-wider mb-1">
+                    {prod.subcategories?.nombre || 'Free Fire'}
+                  </div>
+                  <h4 className="text-base font-bold text-pure mb-2">
+                    {prod.nombre}
+                  </h4>
+                  <p className="text-xs text-ice/70 font-mono line-clamp-2 mb-4">
+                    {prod.descripcion}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-neon/15 flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-gold flex items-center gap-1">
+                    <span>⚡</span> Instantáneo
+                  </span>
+                  <Link
+                    href={`/catalogo/${prod.subcategories?.categories?.slug || 'free-fire'}/${prod.subcategoria_id}/${prod.slug}`}
+                    className="btn-ice-pill px-4 py-1.5 text-xs font-bold uppercase tracking-wider"
+                  >
+                    Ver Precios
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

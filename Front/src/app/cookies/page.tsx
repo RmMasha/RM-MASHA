@@ -1,35 +1,52 @@
-import React from 'react';
+import Link from 'next/link';
 
-export default function CookiesPolicyPage() {
+export default function CookiesPage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
-      <h1 className="text-3xl font-black text-white">Política de Cookies</h1>
-      <p className="text-sm text-slate-400">Última actualización: Noviembre 2026</p>
+    <div className="container mx-auto px-4 sm:px-6 py-12 max-w-4xl">
+      <nav className="flex items-center gap-2 text-xs font-mono text-ice/60 mb-6">
+        <Link href="/" className="hover:text-neon">Inicio</Link>
+        <span>/</span>
+        <span className="text-pure font-bold">Política de Cookies</span>
+      </nav>
 
-      <section className="space-y-3 text-sm text-slate-300 leading-relaxed">
-        <h2 className="text-lg font-bold text-white">1. ¿Qué son las cookies?</h2>
-        <p>
-          Una cookie es un pequeño archivo de texto que un sitio web almacena en su navegador para permitir el funcionamiento de las sesiones de usuario, recordar preferencias y garantizar transacciones financieras seguras.
-        </p>
+      <div className="cyber-panel rounded-3xl p-8 md:p-12 border-neon/30">
+        <h1 className="text-2xl md:text-3xl font-black text-pure uppercase tracking-wider mb-6">
+          Política de <span className="text-neon">Cookies</span>
+        </h1>
 
-        <h2 className="text-lg font-bold text-white pt-4">2. Cookies que utilizamos en RM & Masha</h2>
-        <p>
-          Nuestra plataforma utiliza únicamente cookies estrictamente necesarias para la autenticación y seguridad de sus operaciones:
-        </p>
-        <ul className="list-disc pl-5 space-y-2 text-slate-400">
-          <li>
-            <strong className="text-white">sb-[ref]-auth-token:</strong> Cookie técnica emitida por Supabase para mantener activa y cifrada su sesión de usuario.
-          </li>
-          <li>
-            <strong className="text-white">rm_masha_cookie_consent:</strong> Almacena su consentimiento sobre el uso de cookies técnicas.
-          </li>
-        </ul>
+        <div className="space-y-6 text-xs md:text-sm font-mono text-ice/80 leading-relaxed">
+          <p>
+            En <strong className="text-pure">RM & Masha</strong>, utilizamos cookies técnicas esenciales para garantizar el correcto funcionamiento del sistema de autenticación, preservación de sesiones seguras y persistencia del token de acceso a la billetera digital.
+          </p>
 
-        <h2 className="text-lg font-bold text-white pt-4">3. Cómo administrar o desactivar las cookies</h2>
-        <p>
-          Usted puede bloquear o eliminar las cookies en cualquier momento mediante las opciones de configuración de su navegador web. Tenga en cuenta que deshabilitar cookies técnicas impedirá iniciar sesión y recargar saldo en su billetera.
-        </p>
-      </section>
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            1. ¿Qué Cookies Utilizamos?
+          </h2>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>
+              <strong className="text-neon">sb-xvwcmcrfgrclhebbcrze-auth-token:</strong> Cookie técnica de sesión cifrada administrada por el SDK oficial de Supabase Auth. Garantiza que tu sesión permanezca activa sin exponer credenciales.
+            </li>
+            <li>
+              <strong className="text-neon">rm_session_pref:</strong> Almacena preferencias visuales y selección de vista de catálogo de forma no intrusiva.
+            </li>
+          </ul>
+
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            2. Cookies de Terceros y Rastreo Publicitario
+          </h2>
+          <p>
+            Nuestra plataforma <strong className="text-magenta">NO</strong> utiliza cookies de rastreo publicitario invasivo ni comparte perfiles de navegación con redes de anuncios comerciales ajenas a nuestro ecosistema.
+          </p>
+
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            3. Control y Desactivación
+          </h2>
+          <p>
+            Puedes deshabilitar las cookies desde la configuración de tu navegador; sin embargo, ten en cuenta que el inicio de sesión y la recarga de saldo requieren cookies funcionales para operar de forma segura.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
+

@@ -1,156 +1,159 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Review } from '@/types/database.types';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/utils';
-import { MessageSquare, Star, CheckCircle, XCircle, Sparkles, Loader2 } from 'lucide-react';
 
 export default function AdminComentariosPage() {
-  const supabase = createClient();
-
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadReviews = useCallback(async () => {
+  const fetchReviews = async () => {
     try {
       setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('reviews')
-        .select('*, users(nombre, email, nickname, avatar_url, pais)')
-        .order('created_at', { ascending: false });
+        .select('*, users(nombre, email, nickname, rol)')
+        .order('fecha', { ascending: false });
 
-      if (data) setReviews(data as Review[]);
+      if (error) throw error;
+      setReviews(data || []);
     } catch (err) {
-      console.error('Error cargando reseñas:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  };
 
   useEffect(() => {
-    loadReviews();
-  }, [loadReviews]);
+    fetchReviews();
+  }, []);
 
-  // Toggle "Destacado en Hero"
-  const handleToggleHero = async (id: string, current: boolean) => {
+  // Alternar "Mostrar en Hero" (destacado_hero)
+  const handleToggleHero = async (reviewId: string, currentVal: boolean) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('reviews')
-        .update({ destacado_hero: !current })
-        .eq('id', id);
+        .update({ destacado_hero: !currentVal })
+        .eq('id', reviewId);
 
-      setReviews((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, destacado_hero: !current } : r))
-      );
+      if (error) throw error;
+      await fetchReviews();
     } catch (err: any) {
-      alert('Error al actualizar reseña: ' + err.message);
+      alert('Error: ' + err.message);
     }
   };
 
-  // Toggle Activo / Moderado
-  const handleToggleActive = async (id: string, current: boolean) => {
+  // Eliminar reseña
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('¿Estás seguro de eliminar este comentario?')) return;
     try {
-      await supabase
+      const { error } = await supabase
         .from('reviews')
-        .update({ activo: !current })
-        .eq('id', id);
+        .delete()
+        .eq('id', reviewId);
 
-      setReviews((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, activo: !current } : r))
-      );
+      if (error) throw error;
+      await fetchReviews();
     } catch (err: any) {
-      alert('Error al moderar reseña: ' + err.message);
+      alert('Error: ' + err.message);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-black text-white">Moderación de Reseñas y Destacados del Hero</h2>
-        <p className="text-xs text-slate-400">
-          Supervisa las opiniones dejadas por los usuarios y activa el switch para mostrarlas como burbujas flotantes en la página de inicio.
-        </p>
+      {/* Cabecera */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30 flex justify-between items-center">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[11px] font-mono uppercase mb-2">
+            <span>❄</span> Módulo 6.3: Moderación de Reseñas & Burbujas del Hero
+          </div>
+          <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+            Gestión de Comentarios
+          </h1>
+          <p className="text-xs text-ice/70 font-mono mt-1">
+            Modera testimonios de la comunidad y activa el interruptor "Mostrar en Hero" para visibilidad destacada.
+          </p>
+        </div>
+
+        <button
+          onClick={() => fetchReviews()}
+          className="btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider"
+        >
+          ↻ Actualizar
+        </button>
       </div>
 
-      <div className="bg-surface-card border border-surface-border rounded-3xl overflow-hidden shadow-xl">
+      {/* Lista de Reseñas */}
+      <div className="cyber-panel rounded-2xl overflow-hidden border-neon/30">
         {loading ? (
-          <div className="p-16 text-center text-xs text-slate-400">Cargando comentarios...</div>
+          <div className="p-12 text-center text-xs font-mono text-ice">Cargando reseñas...</div>
         ) : reviews.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-400">No hay comentarios registrados aún.</div>
+          <div className="p-12 text-center text-xs font-mono text-ice/60">No hay comentarios registrados.</div>
         ) : (
-          <div className="divide-y divide-surface-border overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface/80 text-slate-400 uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Fecha</th>
-                  <th className="px-5 py-3 font-semibold">Usuario</th>
-                  <th className="px-5 py-3 font-semibold">Calificación</th>
-                  <th className="px-5 py-3 font-semibold">Comentario</th>
-                  <th className="px-5 py-3 font-semibold">Hero Switch</th>
-                  <th className="px-5 py-3 font-semibold text-right">Moderación</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-neon/20 text-ice/70 bg-pitch/80">
+                  <th className="py-3.5 px-4">Usuario</th>
+                  <th className="py-3.5 px-4">Tipo / Contexto</th>
+                  <th className="py-3.5 px-4">Calificación</th>
+                  <th className="py-3.5 px-4">Comentario</th>
+                  <th className="py-3.5 px-4">Fecha</th>
+                  <th className="py-3.5 px-4 text-center">Mostrar en Hero</th>
+                  <th className="py-3.5 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
-                {reviews.map((rev) => (
-                  <tr key={rev.id} className="hover:bg-surface-hover/30 transition-colors">
-                    <td className="px-5 py-4 whitespace-nowrap text-slate-400 text-[11px]">
-                      {formatDate(rev.created_at)}
-                    </td>
-
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <span className="font-bold text-white block">
-                        {rev.users?.nickname || rev.users?.nombre || 'Usuario'}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        {rev.users?.email}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex text-brand-gold text-xs">
-                        {'★'.repeat(rev.calificacion)}
-                        {'☆'.repeat(5 - rev.calificacion)}
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4 max-w-sm">
-                      <p className="text-slate-300 italic">"{rev.comentario_texto}"</p>
-                      <span className="text-[10px] text-slate-500 capitalize">
-                        Nivel: {rev.entidad_tipo}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleHero(rev.id, rev.destacado_hero)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${
-                          rev.destacado_hero
-                            ? 'bg-brand-gold/10 text-brand-gold border border-brand-gold/40 shadow-glow-gold/20'
-                            : 'bg-surface border border-surface-border text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        {rev.destacado_hero ? 'En Hero (Activo)' : 'Oculto de Hero'}
-                      </button>
-                    </td>
-
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(rev.id, rev.activo)}
-                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors ${
-                          rev.activo
-                            ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        }`}
-                      >
-                        {rev.activo ? 'Desactivar' : 'Aprobar'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-neon/10">
+                {reviews.map((rev) => {
+                  const revId = rev.id || rev.review_id;
+                  const revFecha = rev.created_at || rev.fecha;
+                  return (
+                    <tr key={revId} className="hover:bg-navy/40 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="text-pure font-bold">{rev.users?.nombre || 'Usuario'}</div>
+                        <div className="text-[11px] text-neon">{rev.users?.nickname ? `@${rev.users.nickname}` : rev.users?.email}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] uppercase font-bold bg-navy border border-neon/30 text-ice">
+                          {rev.entidad_tipo}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-gold">
+                        {Array.from({ length: rev.calificacion || 5 }).map((_, i) => (
+                          <span key={i}>★</span>
+                        ))}
+                      </td>
+                      <td className="py-3.5 px-4 max-w-xs text-pure">
+                        <p className="line-clamp-2 italic">"{rev.comentario_texto}"</p>
+                      </td>
+                      <td className="py-3.5 px-4 text-ice/70">
+                        {formatDate(revFecha)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleHero(revId, rev.destacado_hero)}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
+                            rev.destacado_hero
+                              ? 'bg-gold/20 border border-gold text-gold shadow-[0_0_10px_rgba(251,191,36,0.3)]'
+                              : 'bg-navy border border-neon/20 text-ice/50 hover:border-ice/50'
+                          }`}
+                        >
+                          {rev.destacado_hero ? '★ Activo en Hero' : 'Oculto en Hero'}
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => handleDeleteReview(revId)}
+                          className="px-2.5 py-1 rounded-lg text-magenta hover:bg-magenta/20 border border-transparent hover:border-magenta text-xs"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -159,3 +162,4 @@ export default function AdminComentariosPage() {
     </div>
   );
 }
+

@@ -61,3 +61,4 @@ Este documento detalla todas las APIs, funciones RPC de PostgreSQL, consultas de
 ## 4. Canales de Tiempo Real (Supabase Realtime)
 - Canal `user_notifications:[UID]`: Notificaciones push de pedidos, saldo aprobado o rechazos.
 - Canal `admin_orders`: Alertas en vivo para administradores cuando ingresa un nuevo pedido o recarga.
+

@@ -1,297 +1,278 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { UserProfile } from '@/types/database.types';
-import { formatCurrency, getRoleBadgeColor } from '@/lib/utils';
-import { DollarSign, Search, CheckCircle, AlertTriangle, Loader2, User } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { formatCurrency, getRoleBadge } from '@/lib/utils';
 
 export default function AdminSaldoManualPage() {
-  const supabase = createClient();
+  const { user, profile } = useAuth();
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-
-  // Formulario de Ajuste
-  const [adjustmentAmount, setAdjustmentAmount] = useState<string>('5');
-  const [isIncrease, setIsIncrease] = useState<boolean>(true); // true = sumar, false = descontar
-  const [reason, setReason] = useState<string>('Bonificación promocional');
+  // Formulario de ajuste
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [monto, setMonto] = useState<string>('5.00');
+  const [tipo, setTipo] = useState<'ingreso' | 'descuento_compra' | 'reembolso'>('ingreso');
+  const [motivo, setMotivo] = useState<string>('Promoción Navideña');
   const [submitting, setSubmitting] = useState(false);
-  const [resultMsg, setResultMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  );
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const searchUsers = async (term: string) => {
-    setLoadingUsers(true);
+  // Cargar usuarios
+  const fetchUsers = async () => {
     try {
-      let query = supabase.from('users').select('*').limit(10);
-      if (term.trim()) {
-        query = query.or(`email.ilike.%${term}%,nombre.ilike.%${term}%,whatsapp.ilike.%${term}%`);
+      setLoading(true);
+      let query = supabase
+        .from('users')
+        .select('id, nombre, email, whatsapp, rol, saldo_actual')
+        .order('nombre', { ascending: true });
+
+      // Si el rol es admin, Supabase RLS o un filtro explícito oculta estrictamente al programador
+      if (profile?.rol === 'admin') {
+        query = query.neq('rol', 'programador');
       }
+
       const { data, error } = await query;
-      if (data && !error) {
-        setUsers(data as UserProfile[]);
+      if (error) throw error;
+
+      setUsersList(data || []);
+      if (data && data.length > 0 && !selectedUserId) {
+        setSelectedUserId(data[0].id);
       }
     } catch (err) {
-      console.error('Error buscando usuarios:', err);
+      console.error('Error fetching users:', err);
     } finally {
-      setLoadingUsers(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    searchUsers('');
-  }, []);
+    fetchUsers();
+  }, [profile]);
 
-  const handleApplyAdjustment = async (e: React.FormEvent) => {
+  // Ejecutar ajuste manual
+  const handleAjusteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
-    setResultMsg(null);
+    if (!user || !selectedUserId) return;
 
-    const amountNum = parseFloat(adjustmentAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setResultMsg({ type: 'error', text: 'El monto debe ser un valor positivo mayor a 0.' });
+    const numMonto = parseFloat(monto);
+    if (isNaN(numMonto) || numMonto <= 0) {
+      setFeedback({ type: 'error', text: 'Ingresa un monto válido mayor a 0.' });
+      return;
+    }
+
+    if (!motivo.trim()) {
+      setFeedback({ type: 'error', text: 'Indica el motivo del ajuste para el historial de auditoría.' });
       return;
     }
 
     setSubmitting(true);
+    setFeedback(null);
 
     try {
+      // Llamar al Stored Procedure atómico: ajuste_manual_saldo
       const { data, error } = await supabase.rpc('ajuste_manual_saldo', {
-        p_usuario_id: selectedUser.id,
-        p_monto: amountNum,
-        p_es_aumento: isIncrease,
-        p_descripcion: reason.trim() || 'Ajuste manual de saldo administrativo',
+        p_usuario_id: selectedUserId,
+        p_monto: numMonto,
+        p_es_aumento: tipo !== 'descuento_compra',
+        p_descripcion: `${tipo === 'reembolso' ? '[Reembolso] ' : tipo === 'ingreso' ? '[Bonificación] ' : '[Débito] '}${motivo.trim()}`,
       });
 
       if (error) throw error;
 
-      setResultMsg({
+      setFeedback({
         type: 'success',
-        text: `¡Ajuste aplicado exitosamente! Nuevo saldo de ${selectedUser.nombre}: ${formatCurrency(
-          data.nuevo_saldo
-        )}.`,
+        text: `¡Ajuste de saldo ejecutado con éxito! Nuevo saldo acreditado en la cuenta del cliente.`,
       });
 
-      // Actualizar usuario seleccionado
-      setSelectedUser({
-        ...selectedUser,
-        saldo_actual: data.nuevo_saldo,
-      });
-
-      searchUsers(searchTerm);
+      await fetchUsers();
     } catch (err: any) {
-      setResultMsg({ type: 'error', text: err.message || 'Error al aplicar el ajuste de saldo.' });
+      console.error('Error al realizar ajuste:', err);
+      setFeedback({ type: 'error', text: err.message || 'Error al procesar el ajuste.' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const filteredUsers = usersList.filter(
+    (u) =>
+      u.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.whatsapp && u.whatsapp.includes(search))
+  );
+
+  const targetUser = usersList.find((u) => u.id === selectedUserId);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-black text-white">Ajuste Manual de Saldo</h2>
-        <p className="text-xs text-slate-400">
-          Acredita saldo promocional o descuenta por reembolsos directamente en la billetera de cualquier cliente.
+      {/* Cabecera */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/15 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-2">
+          <span>❄</span> Módulo 6.2: Ajuste Manual de Saldo (Acreditaciones & Reembolsos)
+        </div>
+        <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+          Ajuste Directo de Billetera
+        </h1>
+        <p className="text-xs text-ice/70 font-mono mt-1">
+          Acredita saldo promocional, bonificaciones a revendedores o genera reembolsos con registro atómico.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* BUSCADOR DE USUARIOS (6 COLS) */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="p-6 rounded-3xl bg-surface-card border border-surface-border space-y-4">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <Search className="w-4 h-4 text-brand-primary" />
-              1. Seleccionar Usuario
-            </h3>
+      {feedback && (
+        <div
+          className={`p-4 rounded-xl text-xs font-mono flex items-center justify-between ${
+            feedback.type === 'success'
+              ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
+              : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span>{feedback.type === 'success' ? '✅' : '⚠️'}</span>
+            <span>{feedback.text}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="font-bold text-white ml-4">
+            ✕
+          </button>
+        </div>
+      )}
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Buscar por nombre, correo o WhatsApp..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && searchUsers(searchTerm)}
-                className="w-full px-4 py-2 rounded-xl bg-surface border border-surface-border text-white text-xs focus:outline-none focus:border-brand-primary"
-              />
-              <button
-                type="button"
-                onClick={() => searchUsers(searchTerm)}
-                className="px-4 py-2 rounded-xl bg-surface-hover hover:bg-surface-border text-white text-xs font-bold transition-colors"
-              >
-                Buscar
-              </button>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Formulario de Ajuste (5 COLS) */}
+        <div className="lg:col-span-5 cyber-panel rounded-2xl p-6 border-neon/30">
+          <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-gold shadow-[0_0_8px_#FBBF24]" />
+            Configurar Operación
+          </h2>
 
-            <div className="divide-y divide-surface-border max-h-96 overflow-y-auto">
-              {loadingUsers ? (
-                <div className="p-6 text-center text-xs text-slate-400">
-                  Buscando usuarios...
-                </div>
-              ) : users.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
-                  No se encontraron usuarios.
+          <form onSubmit={handleAjusteSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Usuario Seleccionado:
+              </label>
+              {targetUser ? (
+                <div className="p-3 rounded-xl bg-navy/80 border border-gold/30 text-xs font-mono">
+                  <div className="font-bold text-pure">{targetUser.nombre}</div>
+                  <div className="text-ice/70">{targetUser.email}</div>
+                  <div className="text-gold font-bold mt-1">
+                    Saldo Actual: {formatCurrency(targetUser.saldo_actual || 0)}
+                  </div>
                 </div>
               ) : (
-                users.map((u) => {
-                  const isSelected = selectedUser?.id === u.id;
-                  return (
-                    <button
-                      type="button"
-                      key={u.id}
-                      onClick={() => {
-                        setSelectedUser(u);
-                        setResultMsg(null);
-                      }}
-                      className={`w-full p-3 text-left transition-all flex items-center justify-between rounded-xl my-1 ${
-                        isSelected
-                          ? 'bg-brand-primary/10 border border-brand-primary'
-                          : 'hover:bg-surface-hover/50'
-                      }`}
-                    >
-                      <div>
-                        <p className="text-xs font-bold text-white">{u.nombre}</p>
-                        <p className="text-[11px] text-slate-400">{u.email}</p>
-                        <span
-                          className={`inline-block text-[9px] uppercase font-bold px-1.5 py-0.2 rounded border mt-1 ${getRoleBadgeColor(
-                            u.rol
-                          )}`}
-                        >
-                          {u.rol}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block">Saldo Actual:</span>
-                        <span className="text-xs font-black text-brand-gold">
-                          {formatCurrency(u.saldo_actual)}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
+                <div className="text-xs font-mono text-magenta">
+                  Selecciona un usuario de la lista de la derecha.
+                </div>
               )}
             </div>
-          </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Tipo de Operación:
+              </label>
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as any)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              >
+                <option value="ingreso">Regalo / Bonificación (+ Ingreso)</option>
+                <option value="reembolso">Reembolso de Pedido (+ Ingreso)</option>
+                <option value="descuento_compra">Descuento Administrativo (- Débito)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Monto (USD):
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.1"
+                required
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Motivo / Justificación:
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ej: Bonificación navideña por revendedor top"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting || !selectedUserId}
+              className="w-full btn-neon-pill py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 mt-4"
+            >
+              {submitting ? 'Procesando Ajuste...' : 'Aplicar Ajuste de Saldo'}
+            </button>
+          </form>
         </div>
 
-        {/* FORMULARIO DE ACCIÓN (6 COLS) */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="p-6 rounded-3xl bg-surface-card border border-surface-border space-y-5">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-brand-gold" />
-              2. Aplicar Ajuste Financiero
-            </h3>
+        {/* Buscador y Lista de Usuarios (7 COLS) */}
+        <div className="lg:col-span-7 cyber-panel rounded-2xl p-6 border-neon/30">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-bold uppercase tracking-wider text-pure flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+              Directorio de Usuarios ({filteredUsers.length})
+            </h2>
+          </div>
 
-            {!selectedUser ? (
-              <div className="p-12 text-center text-slate-400 text-xs border border-dashed border-surface-border rounded-2xl">
-                Selecciona primero un usuario del listado para modificar su saldo.
-              </div>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Buscar por nombre, correo o WhatsApp..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono placeholder-ice/40 focus:outline-none focus:border-neon"
+            />
+          </div>
+
+          <div className="max-h-[500px] overflow-y-auto space-y-2 pr-1">
+            {loading ? (
+              <div className="text-center py-8 text-xs font-mono text-ice">Cargando directorio...</div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-8 text-xs font-mono text-ice/60">No se encontraron usuarios.</div>
             ) : (
-              <form onSubmit={handleApplyAdjustment} className="space-y-4">
-                <div className="p-3 rounded-xl bg-surface border border-surface-border text-xs flex justify-between items-center">
-                  <div>
-                    <span className="text-slate-400 block">Usuario seleccionado:</span>
-                    <strong className="text-white">{selectedUser.nombre}</strong> ({selectedUser.email})
-                  </div>
-                  <div className="text-right">
-                    <span className="text-slate-400 block">Saldo disponible:</span>
-                    <strong className="text-brand-gold text-sm">{formatCurrency(selectedUser.saldo_actual)}</strong>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Tipo de Operación
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsIncrease(true)}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                        isIncrease
-                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-glow-gold/10'
-                          : 'bg-surface border-surface-border text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      + Sumar Saldo (Regalo / Bono)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsIncrease(false)}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                        !isIncrease
-                          ? 'bg-rose-500/10 border-rose-500 text-rose-400 shadow-glow-red/10'
-                          : 'bg-surface border-surface-border text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      - Descontar Saldo (Reembolso)
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Monto (USD)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    required
-                    value={adjustmentAmount}
-                    onChange={(e) => setAdjustmentAmount(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface border border-surface-border text-white text-sm focus:outline-none focus:border-brand-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Motivo / Descripción de la Transacción
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej: Bonificación por torneo / Ajuste de soporte"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface border border-surface-border text-white text-sm focus:outline-none focus:border-brand-primary"
-                  />
-                </div>
-
-                {resultMsg && (
+              filteredUsers.map((u) => {
+                const isSelected = u.id === selectedUserId;
+                return (
                   <div
-                    className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                      resultMsg.type === 'success'
-                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-                        : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                    key={u.id}
+                    onClick={() => setSelectedUserId(u.id)}
+                    className={`p-3.5 rounded-xl border text-xs font-mono cursor-pointer transition-all flex items-center justify-between ${
+                      isSelected
+                        ? 'border-gold bg-gold/15 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                        : 'border-neon/15 bg-navy/50 hover:border-ice/40 hover:bg-navy/80'
                     }`}
                   >
-                    {resultMsg.type === 'success' ? (
-                      <CheckCircle className="w-4 h-4 shrink-0" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 shrink-0" />
-                    )}
-                    <span>{resultMsg.text}</span>
-                  </div>
-                )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-pure">{u.nombre}</span>
+                        <span className={getRoleBadge(u.rol)}>{u.rol}</span>
+                      </div>
+                      <div className="text-ice/70 text-[11px]">{u.email}</div>
+                    </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 rounded-xl font-bold text-white bg-brand-primary hover:bg-brand-hover shadow-glow-red transition-all flex items-center justify-center gap-2 text-xs disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Procesando Ajuste...
-                    </>
-                  ) : (
-                    'Confirmar y Aplicar Ajuste'
-                  )}
-                </button>
-              </form>
+                    <div className="text-right">
+                      <div className="text-[10px] text-ice/50">Saldo</div>
+                      <div className="font-bold text-gold text-sm">
+                        {formatCurrency(u.saldo_actual || 0)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -299,3 +280,4 @@ export default function AdminSaldoManualPage() {
     </div>
   );
 }
+

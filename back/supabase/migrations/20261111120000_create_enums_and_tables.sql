@@ -245,3 +245,4 @@ CREATE INDEX idx_recharges_estado ON public.balance_recharges(estado);
 CREATE INDEX idx_transactions_usuario ON public.transactions(usuario_id);
 CREATE INDEX idx_reviews_destacado ON public.reviews(destacado_hero) WHERE activo = true;
 CREATE INDEX idx_notifications_usuario_leido ON public.notifications(usuario_id, leido);
+

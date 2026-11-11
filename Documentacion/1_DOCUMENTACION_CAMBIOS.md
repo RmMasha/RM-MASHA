@@ -32,3 +32,45 @@ Este documento registra cronológicamente cada cambio, modificación, creación 
   - `back/scripts/migrate.js`: Script de migración automatizado vía PostgreSQL directo.
   - `Front/.env.local`: Configuración de conexión cliente con las credenciales de Supabase del proyecto `xvwcmcrfgrclhebbcrze`.
   - `Front/.env.example`: Plantilla de variables de entorno para control de versiones.
+
+---
+
+## [11/11/2026 - 06:45 PM] - Reconstrucción Total del Frontend: Temática Ciber-Navideña Free Fire (Cyber Winter)
+
+### Cambios Realizados:
+- **Rediseño Completo de la Paleta y Estilos Visuales (`Front/tailwind.config.ts` y `Front/src/app/globals.css`):**
+  - **Atmósfera / Fondo Base:** Azul Marino Profundo (`#050811`, `#070B19`) para un entorno nocturno inmersivo.
+  - **Energía y Resplandores:** Azul Eléctrico / Neón (`#00D2FF`) para líneas de la cuadrícula cibernética, rayos y bordes brillantes.
+  - **Contraste y Nieve:** Blanco Puro (`#FFFFFF`) para textos legibles, texturas de nieve acumulada y copos vectoriales; Rosa Fucsia / Magenta (`#FF007F`) en detalles de vestimenta táctica y atuendo de Caperucita.
+  - **Acentos y Relleno:** Celeste / Azul Hielo (`#7DD3FC`) en cajas de regalo navideñas, escarcha y brillo interno de botones; Negro Táctico Opaco (`#060913`) en paneles de información rectangulares (`.cyber-panel`); Dorado Festivo (`#FBBF24`) en saldo actual, insignias, hebillas y estrellas.
+  - **Formas de Interfaz:** Botones en forma de píldora (`rounded-full`) con resplandor neón (`.btn-neon-pill`, `.btn-ice-pill`, `.btn-magenta-pill`) y paneles rectangulares negros con bordes finos azul neón.
+- **Componentes Globales y de Layout:**
+  - `Front/src/components/common/Snowfall.tsx`: Generador de partículas de nieve animadas por CSS en tiempo real con parámetro configurable de densidad.
+  - `Front/src/components/common/Navbar.tsx`: Barra de navegación minimalista superior con saldo en vivo en píldora dorada, campanita de notificaciones push, modal de notificaciones y dropdown de usuario.
+  - `Front/src/components/common/Footer.tsx`: Pie de página rectangular negro con borde neón y enlaces a políticas legales.
+  - `Front/src/components/common/ErrorBoundary.tsx`: Componente de aislamiento de errores en React para proteger la navegación.
+  - `Front/src/components/home/HeroChristmas.tsx`: Banner principal temático con avatares duales (masculino táctico con bandana y gorra con 'F' dorada; femenino con trenzas rubias y atuendo fucsia), letras 3D de "FREE FIRE" con nieve acumulada, cajas de regalo azul hielo con lazos plateados y burbujas circulares de reseñas destacadas.
+- **Arquitectura de Catálogo Aislado en 4 Niveles:**
+  - `Front/src/app/catalogo/page.tsx` & `error.tsx`: Nivel 1 - Categorías principales y productos destacados.
+  - `Front/src/app/catalogo/[categoria]/page.tsx` & `error.tsx`: Nivel 2 - Subcategorías dinámicas filtradas por slug.
+  - `Front/src/app/catalogo/[categoria]/[subcategoria]/page.tsx` & `error.tsx`: Nivel 3 - Lista de productos de la subcategoría seleccionada.
+  - `Front/src/app/catalogo/[categoria]/[subcategoria]/[producto]/page.tsx` & `error.tsx`: Nivel 4 - Vista detallada del producto.
+  - `Front/src/components/catalog/ProductCheckoutClient.tsx`: Panel interactivo de compra con selector de variantes, matriz de precios dinámicos según rol de usuario (`cliente`, `revendedor`, etc.), campos dinámicos obligatorios (UID Free Fire con validación numérica), selector dual de liquidación (Pagar con Saldo Automático vía RPC `pagar_con_saldo` vs Pago Directo con subida de comprobante al bucket `comprobantes`), y módulo de reseñas.
+- **Módulos de Cliente y Autenticación:**
+  - `Front/src/app/billetera/page.tsx` & `BilleteraClient.tsx`: Monedero interno con saldo en dorado festivo, formulario de depósito con comprobante de transferencia y tablas de transacciones y recargas.
+  - `Front/src/app/ordenes/page.tsx` & `OrdenesClient.tsx`: Historial de pedidos del usuario con badges de estado neón.
+  - `Front/src/app/perfil/page.tsx`: Gestión de perfil, nickname, WhatsApp, avatar personal y rol.
+  - `Front/src/app/login/page.tsx` & `LoginClient.tsx`: Formulario de inicio de sesión cibernético con redirección inteligente.
+  - `Front/src/app/registro/page.tsx` & `RegistroClient.tsx`: Formulario de registro completo con campos de auditoría.
+  - `Front/src/app/cookies/page.tsx`, `terminos/page.tsx`, `privacidad/page.tsx`: Páginas legales normativas.
+- **Panel Administrativo Completo (`Front/src/app/admin/`):**
+  - `layout.tsx`: Protección estricta con verificación de rol (`admin`, `programador`) y ocultamiento del programador frente al admin.
+  - `pedidos/page.tsx`: Gestor de pedidos con paginación de 10 en 10, pestañas (Nuevos, Confirmados, Entregados, Rechazados), visor modal de comprobantes y disparo de notificaciones push automáticas.
+  - `recargas/page.tsx`: Aprobación y rechazo de solicitudes de recarga mediante funciones atómicas PostgreSQL (`aprobar_recarga_saldo`, `rechazar_recarga_saldo`).
+  - `saldo-manual/page.tsx`: Acreditación manual de saldo promocional, regalos a revendedores o débitos con motivo registrado mediante `ajuste_manual_saldo`.
+  - `catalogo/page.tsx`: Editor visual de la jerarquía de catálogo, matriz de precios por rol y requisitos de entrega.
+  - `metodos-pago/page.tsx`: CRUD y reglas de validación de canales de pago.
+  - `comentarios/page.tsx`: Moderación de reseñas comunitarias y switch para mostrarlas en el Hero principal.
+- **Verificación de Compilación y Puesta en Marcha:**
+  - Compilación exitosa de producción `next build` (20 de 20 rutas estáticas y dinámicas compiladas con 0 errores).
+  - Servidor de desarrollo Next.js en ejecución en `http://localhost:3000` respondiendo con código HTTP 200 OK.

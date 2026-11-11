@@ -1,23 +1,21 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
   fallbackTitle?: string;
-  fallbackMessage?: string;
 }
 
 interface State {
   hasError: boolean;
-  error: Error | null;
+  error?: Error;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false,
-    error: null,
+    hasError: false
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -25,34 +23,40 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary capturó una excepción:', error, errorInfo);
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
-
-  private handleRetry = () => {
-    this.setState({ hasError: false, error: null });
-  };
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="p-6 my-4 rounded-xl bg-surface-card border border-rose-500/30 text-center max-w-lg mx-auto shadow-glow-red">
-          <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-3">
-            <AlertTriangle className="w-6 h-6" />
+        <div className="min-h-[360px] flex items-center justify-center p-6">
+          <div className="cyber-panel p-8 rounded-2xl max-w-lg w-full text-center border-neon-blue/40 shadow-neon">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-magenta/10 border border-magenta flex items-center justify-center text-magenta shadow-[0_0_20px_rgba(255,0,127,0.3)]">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-black text-pure tracking-wider uppercase mb-2">
+              {this.props.fallbackTitle || 'Módulo Protegido'}
+            </h2>
+            <p className="text-sm text-ice-blue/80 mb-6 font-mono">
+              Esta sección experimentó una interferencia aislada. El resto de la plataforma continúa funcionando al 100%.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => this.setState({ hasError: false })}
+                className="btn-ice-pill px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
+              >
+                Reintentar Módulo
+              </button>
+              <Link
+                href="/"
+                className="btn-neon-pill px-5 py-2.5 text-xs font-bold uppercase tracking-wider inline-flex items-center"
+              >
+                Volver al Home
+              </Link>
+            </div>
           </div>
-          <h3 className="text-lg font-bold text-white mb-1">
-            {this.props.fallbackTitle || 'Sección temporalmente no disponible'}
-          </h3>
-          <p className="text-sm text-slate-400 mb-4">
-            {this.props.fallbackMessage ||
-              'Ocurrió un inconveniente al cargar esta sección. El resto de la plataforma continúa funcionando normalmente.'}
-          </p>
-          <button
-            onClick={this.handleRetry}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-surface-hover hover:bg-surface-border border border-slate-700 rounded-lg transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Reintentar
-          </button>
         </div>
       );
     }
@@ -60,3 +64,6 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;
+

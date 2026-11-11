@@ -1,29 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import {
-  Category,
-  Subcategory,
-  Product,
-  Variant,
-  Price,
-  ProductRequirement,
-  UserRole,
-} from '@/types/database.types';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { Category, Subcategory, Product, Variant, Price, UserRole } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
-import {
-  Layers,
-  Plus,
-  Edit2,
-  Trash2,
-  Save,
-  Check,
-  AlertTriangle,
-  Loader2,
-  Settings,
-  DollarSign,
-} from 'lucide-react';
 
 const ALL_ROLES: UserRole[] = [
   'cliente',
@@ -35,343 +15,404 @@ const ALL_ROLES: UserRole[] = [
 ];
 
 export default function AdminCatalogoPage() {
-  const supabase = createClient();
-
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCatId, setSelectedCatId] = useState<string>('');
-
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [selectedSubcatId, setSelectedSubcatId] = useState<string>('');
-
+  const [selectedSubId, setSelectedSubId] = useState<string>('');
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProdId, setSelectedProdId] = useState<string>('');
-
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [requirements, setRequirements] = useState<ProductRequirement[]>([]);
-
+  const [variants, setVariants] = useState<(Variant & { prices: Price[] })[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Estados para nuevo producto/variante
+  const [editingPrices, setEditingPrices] = useState<Record<string, Record<string, string>>>({});
   const [savingPrices, setSavingPrices] = useState<string | null>(null);
 
-  // Estados de edición de matriz de precios { [varianteId_rol]: precio }
-  const [priceMatrix, setPriceMatrix] = useState<Record<string, string>>({});
+  // Requisitos del producto seleccionado
+  const [requirements, setRequirements] = useState<any[]>([]);
+  const [newReqField, setNewReqField] = useState('');
+  const [newReqType, setNewReqType] = useState('id_jugador');
 
   // Cargar categorías iniciales
-  const loadCategories = useCallback(async () => {
+  const loadCategories = async () => {
     try {
       setLoading(true);
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .order('orden', { ascending: true });
-
-      if (data && data.length > 0) {
-        setCategories(data as Category[]);
-        setSelectedCatId(data[0].id);
+      const { data } = await supabase.from('categories').select('*').order('orden');
+      if (data) {
+        setCategories(data);
+        if (data.length > 0 && !selectedCatId) {
+          const firstId = data[0].id || data[0].categoria_id || '';
+          setSelectedCatId(firstId);
+        }
       }
     } catch (err) {
-      console.error('Error cargando categorías:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  };
 
-  // Cargar subcategorías cuando cambia la categoría
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  // Cargar subcategorías cuando cambia categoría seleccionada
   useEffect(() => {
     if (!selectedCatId) return;
-    const fetchSubcats = async () => {
+    const loadSubs = async () => {
       const { data } = await supabase
         .from('subcategories')
         .select('*')
         .eq('categoria_id', selectedCatId)
-        .order('orden', { ascending: true });
-
-      setSubcategories((data as Subcategory[]) || []);
+        .order('orden');
+      setSubcategories(data || []);
       if (data && data.length > 0) {
-        setSelectedSubcatId(data[0].id);
+        const firstSubId = data[0].id || data[0].subcategoria_id || '';
+        setSelectedSubId(firstSubId);
       } else {
-        setSelectedSubcatId('');
+        setSelectedSubId('');
         setProducts([]);
-        setVariants([]);
+        setSelectedProdId('');
       }
     };
-    fetchSubcats();
-  }, [selectedCatId, supabase]);
+    loadSubs();
+  }, [selectedCatId]);
 
-  // Cargar productos cuando cambia la subcategoría
+  // Cargar productos cuando cambia subcategoría
   useEffect(() => {
-    if (!selectedSubcatId) return;
-    const fetchProducts = async () => {
+    if (!selectedSubId) return;
+    const loadProds = async () => {
       const { data } = await supabase
         .from('products')
         .select('*')
-        .eq('subcategoria_id', selectedSubcatId)
-        .order('orden', { ascending: true });
-
-      setProducts((data as Product[]) || []);
+        .eq('subcategoria_id', selectedSubId)
+        .order('orden');
+      setProducts(data || []);
       if (data && data.length > 0) {
-        setSelectedProdId(data[0].id);
+        const firstProdId = data[0].id || data[0].producto_id || '';
+        setSelectedProdId(firstProdId);
       } else {
         setSelectedProdId('');
         setVariants([]);
       }
     };
-    fetchProducts();
-  }, [selectedSubcatId, supabase]);
+    loadProds();
+  }, [selectedSubId]);
 
-  // Cargar variantes, requisitos y precios del producto seleccionado
-  useEffect(() => {
+  // Cargar variantes, precios y requisitos cuando cambia producto
+  const loadProductDetails = async () => {
     if (!selectedProdId) return;
-    const fetchProductDetails = async () => {
-      const [varRes, reqRes] = await Promise.all([
-        supabase
-          .from('variants')
-          .select('*, prices(*)')
-          .eq('producto_id', selectedProdId)
-          .order('orden', { ascending: true }),
-        supabase
-          .from('product_requirements')
-          .select('*')
-          .eq('producto_id', selectedProdId)
-          .order('orden', { ascending: true }),
-      ]);
-
-      const vars = (varRes.data as Variant[]) || [];
-      setVariants(vars);
-      setRequirements((reqRes.data as ProductRequirement[]) || []);
-
-      // Poblar matriz de precios local
-      const matrix: Record<string, string> = {};
-      vars.forEach((v) => {
-        v.prices?.forEach((p) => {
-          matrix[`${v.id}_${p.rol}`] = p.precio.toString();
-        });
-      });
-      setPriceMatrix(matrix);
-    };
-    fetchProductDetails();
-  }, [selectedProdId, supabase]);
-
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
-
-  // Guardar Precios de una Variante
-  const handleSavePrices = async (variantId: string) => {
-    setSavingPrices(variantId);
     try {
-      const updates = ALL_ROLES.map((rol) => {
-        const key = `${variantId}_${rol}`;
-        const val = parseFloat(priceMatrix[key] || '0');
-        return {
-          variante_id: variantId,
-          rol,
-          precio: isNaN(val) ? 0 : val,
-        };
-      });
+      // 1. Variantes con precios
+      const { data: varsData } = await supabase
+        .from('variants')
+        .select('*, prices(*)')
+        .eq('producto_id', selectedProdId)
+        .order('orden');
 
-      for (const item of updates) {
-        await supabase.from('prices').upsert(item, {
-          onConflict: 'variante_id,rol',
-        });
+      if (varsData) {
+        setVariants(varsData as any);
+        // Inicializar matriz de edición
+        const priceMap: Record<string, Record<string, string>> = {};
+        for (const v of varsData) {
+          const vId = v.id || v.variante_id || '';
+          priceMap[vId] = {};
+          for (const role of ALL_ROLES) {
+            const pObj = (v as any).prices?.find((p: Price) => p.rol === role);
+            priceMap[vId][role] = pObj ? String(pObj.precio) : '0.00';
+          }
+        }
+        setEditingPrices(priceMap);
       }
 
-      alert('¡Precios actualizados exitosamente!');
+      // 2. Requisitos
+      const { data: reqData } = await supabase
+        .from('product_requirements')
+        .select('*')
+        .eq('producto_id', selectedProdId)
+        .order('orden');
+      setRequirements(reqData || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    loadProductDetails();
+  }, [selectedProdId]);
+
+  // Guardar precios de una variante
+  const handleSavePrices = async (varianteId: string) => {
+    try {
+      setSavingPrices(varianteId);
+      const varPrices = editingPrices[varianteId];
+      if (!varPrices) return;
+
+      for (const role of ALL_ROLES) {
+        const precioNum = parseFloat(varPrices[role] || '0');
+        const { error } = await supabase.from('prices').upsert(
+          {
+            variante_id: varianteId,
+            rol: role,
+            precio: precioNum,
+          },
+          { onConflict: 'variante_id,rol' }
+        );
+        if (error) throw error;
+      }
+
+      alert('¡Precios actualizados exitosamente para todos los roles!');
+      await loadProductDetails();
     } catch (err: any) {
-      alert('Error al guardar precios: ' + err.message);
+      console.error('Error guardando precios:', err);
+      alert('Error: ' + err.message);
     } finally {
       setSavingPrices(null);
     }
   };
 
+  // Agregar requisito al producto
+  const handleAddRequirement = async () => {
+    if (!selectedProdId || !newReqField.trim()) return;
+    try {
+      const { error } = await supabase.from('product_requirements').insert({
+        producto_id: selectedProdId,
+        etiqueta: newReqField.trim(),
+        tipo: newReqType as any,
+        requerido: true,
+        placeholder: `Ingresa tu ${newReqField.trim()}`,
+        orden: requirements.length + 1,
+      });
+
+      if (error) throw error;
+      setNewReqField('');
+      await loadProductDetails();
+    } catch (err: any) {
+      alert('Error agregando requisito: ' + err.message);
+    }
+  };
+
+  // Eliminar requisito
+  const handleDeleteRequirement = async (requisitoId: string) => {
+    try {
+      await supabase.from('product_requirements').delete().eq('id', requisitoId);
+      await loadProductDetails();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-black text-white">Gestor de Catálogo y Precios Dinámicos</h2>
-        <p className="text-xs text-slate-400">
-          Configura jerarquías, requisitos de ID del jugador y la matriz de precios por cada nivel de usuario.
+      {/* Cabecera */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/15 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-2">
+          <span>❄</span> Módulo 6.7: Jerarquía de Catálogo & Precios Dinámicos por Rol
+        </div>
+        <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+          Administración de Catálogo
+        </h1>
+        <p className="text-xs text-ice/70 font-mono mt-1">
+          Navegación y configuración en 4 niveles: Categoría → Subcategoría → Producto → Variantes con precios por rol.
         </p>
       </div>
 
-      {/* SELECTORES DE NAVEGACIÓN JERÁRQUICA */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* CATEGORÍA */}
-        <div className="p-4 rounded-2xl bg-surface-card border border-surface-border">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-            1. Categoría
+      {/* Selectores de Nivel Jerárquico */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Nivel 1: Categorías */}
+        <div>
+          <label className="block text-xs font-mono uppercase text-ice mb-2">
+            1. Categoría:
           </label>
           <select
             value={selectedCatId}
             onChange={(e) => setSelectedCatId(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface border border-surface-border text-white text-xs font-bold focus:outline-none focus:border-brand-primary"
+            className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
           >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
+            {categories.map((c) => {
+              const catId = c.id || c.categoria_id || '';
+              return (
+                <option key={catId} value={catId}>
+                  {c.nombre}
+                </option>
+              );
+            })}
           </select>
         </div>
 
-        {/* SUBCATEGORÍA */}
-        <div className="p-4 rounded-2xl bg-surface-card border border-surface-border">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-            2. Subcategoría
+        {/* Nivel 2: Subcategorías */}
+        <div>
+          <label className="block text-xs font-mono uppercase text-ice mb-2">
+            2. Subcategoría:
           </label>
           <select
-            value={selectedSubcatId}
-            onChange={(e) => setSelectedSubcatId(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface border border-surface-border text-white text-xs font-bold focus:outline-none focus:border-brand-primary"
+            value={selectedSubId}
+            onChange={(e) => setSelectedSubId(e.target.value)}
+            disabled={subcategories.length === 0}
+            className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon disabled:opacity-50"
           >
-            {subcategories.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nombre}
-              </option>
-            ))}
+            {subcategories.map((s) => {
+              const subId = s.id || s.subcategoria_id || '';
+              return (
+                <option key={subId} value={subId}>
+                  {s.nombre}
+                </option>
+              );
+            })}
           </select>
         </div>
 
-        {/* PRODUCTO */}
-        <div className="p-4 rounded-2xl bg-surface-card border border-surface-border">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-            3. Producto
+        {/* Nivel 3: Producto */}
+        <div>
+          <label className="block text-xs font-mono uppercase text-ice mb-2">
+            3. Producto:
           </label>
           <select
             value={selectedProdId}
             onChange={(e) => setSelectedProdId(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface border border-surface-border text-white text-xs font-bold focus:outline-none focus:border-brand-primary"
+            disabled={products.length === 0}
+            className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon disabled:opacity-50"
           >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
+            {products.map((p) => {
+              const prodId = p.id || p.producto_id || '';
+              return (
+                <option key={prodId} value={prodId}>
+                  {p.nombre}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
 
-      {/* SECCIÓN DE VARIANTES Y MATRIZ DE PRECIOS */}
-      <div className="bg-surface-card border border-surface-border rounded-3xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-brand-gold" />
-              Matriz de Precios por Rol para este Producto
-            </h3>
-            <p className="text-xs text-slate-400">
-              Define cuánto paga cada tipo de usuario por cada paquete de diamantes.
+      {selectedProdId && (
+        <div className="space-y-6">
+          {/* Matriz de Precios por Rol para las Variantes */}
+          <div className="cyber-panel rounded-2xl p-6 border-neon/30">
+            <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-2 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-gold shadow-[0_0_8px_#FBBF24]" />
+              Matriz de Precios por Rol de Usuario (Variantes del Producto)
+            </h2>
+            <p className="text-xs font-mono text-ice/70 mb-6">
+              Define los precios en dólares (USD) para cada rango de cliente y revendedor.
             </p>
-          </div>
-        </div>
 
-        {variants.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400">
-            No hay variantes creadas para este producto.
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {variants.map((v) => {
-              const isSaving = savingPrices === v.id;
-              return (
-                <div
-                  key={v.id}
-                  className="p-5 rounded-2xl bg-surface/70 border border-surface-border space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-white text-sm">{v.nombre}</h4>
-                      <span className="text-xs text-slate-400">
-                        {v.cantidad_items} diamantes/items • Orden: {v.orden}
-                      </span>
+            <div className="space-y-6">
+              {variants.map((v) => {
+                const varId = v.id || v.variante_id || '';
+                return (
+                  <div key={varId} className="p-4 rounded-xl bg-navy/60 border border-neon/20">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                      <div>
+                        <h3 className="font-bold text-pure text-sm">{v.nombre}</h3>
+                        <p className="text-[11px] font-mono text-ice/60">{v.descripcion}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={savingPrices === varId}
+                        onClick={() => handleSavePrices(varId)}
+                        className="btn-neon-pill px-4 py-1.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                      >
+                        {savingPrices === varId ? 'Guardando...' : 'Guardar Precios'}
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={isSaving}
-                      onClick={() => handleSavePrices(v.id)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-primary hover:bg-brand-hover transition-colors shadow-glow-red disabled:opacity-50"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          Guardando...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-3.5 h-3.5" />
-                          Guardar Precios
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* INPUTS DE PRECIOS POR ROL */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
-                    {ALL_ROLES.map((rol) => {
-                      const key = `${v.id}_${rol}`;
-                      return (
-                        <div key={rol} className="p-2.5 rounded-xl bg-surface border border-surface-border space-y-1">
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
-                            {rol.replace('_', ' ')}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {ALL_ROLES.map((role) => (
+                        <div key={role} className="p-2.5 rounded-lg bg-pitch border border-neon/20">
+                          <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
+                            {role.replace('_', ' ')}:
                           </label>
                           <div className="relative">
-                            <span className="text-xs text-slate-500 absolute left-2 top-2">$</span>
+                            <span className="absolute left-2 top-1.5 text-gold font-mono text-xs">$</span>
                             <input
                               type="number"
                               step="0.01"
-                              min="0"
-                              value={priceMatrix[key] || ''}
-                              onChange={(e) =>
-                                setPriceMatrix((prev) => ({
+                              value={editingPrices[varId]?.[role] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditingPrices((prev) => ({
                                   ...prev,
-                                  [key]: e.target.value,
-                                }))
-                              }
-                              className="w-full pl-5 pr-2 py-1.5 rounded-lg bg-surface-card border border-surface-border text-white text-xs font-bold focus:outline-none focus:border-brand-primary"
+                                  [varId]: {
+                                    ...prev[varId],
+                                    [role]: val,
+                                  },
+                                }));
+                              }}
+                              className="w-full pl-5 pr-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-neon"
                             />
                           </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* SECCIÓN DE REQUISITOS DE ENTREGA */}
-      <div className="bg-surface-card border border-surface-border rounded-3xl p-6 space-y-4">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <Settings className="w-5 h-5 text-brand-cyan" />
-          Requisitos de Entrega Configurados para este Producto
-        </h3>
-        <p className="text-xs text-slate-400">
-          Campos que el cliente debe completar obligatoriamente al ordenar este producto (ej. ID de Jugador).
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          {requirements.map((req) => (
-            <div
-              key={req.id}
-              className="p-4 rounded-xl bg-surface border border-surface-border text-xs space-y-1"
-            >
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-white">{req.etiqueta}</span>
-                <span className="text-[10px] uppercase font-bold text-brand-primary">
-                  {req.requerido ? 'Obligatorio' : 'Opcional'}
-                </span>
-              </div>
-              <p className="text-slate-400 text-[11px]">Tipo de campo: {req.tipo}</p>
-              {req.regex_validacion && (
-                <p className="font-mono text-slate-500 text-[10px]">
-                  Regex: {req.regex_validacion}
-                </p>
-              )}
+                );
+              })}
             </div>
-          ))}
+          </div>
+
+          {/* Requisitos de Entrega para este Producto (UID, Nickname, etc.) */}
+          <div className="cyber-panel rounded-2xl p-6 border-neon/30">
+            <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-2 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-magenta shadow-[0_0_8px_#FF007F]" />
+              Campos y Requisitos Solicitados al Comprador
+            </h2>
+            <p className="text-xs font-mono text-ice/70 mb-4">
+              Estos campos serán solicitados en el checkout al momento de la compra (ej. ID de Jugador).
+            </p>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {requirements.map((r) => {
+                const reqId = r.id || r.requisito_id;
+                const reqLabel = r.etiqueta || r.campo_nombre;
+                return (
+                  <div
+                    key={reqId}
+                    className="px-3 py-1.5 rounded-xl bg-navy/80 border border-neon/30 flex items-center gap-2 text-xs font-mono"
+                  >
+                    <span className="text-pure font-bold">{reqLabel}</span>
+                    <span className="text-[10px] text-neon uppercase">({r.tipo})</span>
+                    <button
+                      onClick={() => handleDeleteRequirement(reqId)}
+                      className="text-magenta hover:text-white font-bold ml-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Agregar nuevo requisito */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center max-w-xl">
+              <input
+                type="text"
+                placeholder="Nombre del Campo (Ej: ID de Jugador)"
+                value={newReqField}
+                onChange={(e) => setNewReqField(e.target.value)}
+                className="w-full sm:flex-1 px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              />
+              <select
+                value={newReqType}
+                onChange={(e) => setNewReqType(e.target.value)}
+                className="w-full sm:w-auto px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              >
+                <option value="id_jugador">Solo Números (ID Jugador)</option>
+                <option value="nickname">Alfanumérico (Nickname)</option>
+                <option value="correo">Correo Electrónico</option>
+                <option value="personalizado">Texto Libre</option>
+              </select>
+              <button
+                type="button"
+                onClick={handleAddRequirement}
+                className="w-full sm:w-auto btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+              >
+                + Agregar Campo
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

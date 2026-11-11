@@ -163,3 +163,4 @@ USING (auth.uid() = usuario_id);
 CREATE POLICY "notifications_update" ON public.notifications FOR UPDATE
 USING (auth.uid() = usuario_id)
 WITH CHECK (auth.uid() = usuario_id);
+

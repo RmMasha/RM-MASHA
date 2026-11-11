@@ -16,7 +16,8 @@ export function formatCurrency(amount: number | string): string {
   }).format(num);
 }
 
-export function formatDate(dateString: string): string {
+export function formatDate(dateString?: string | null): string {
+  if (!dateString) return '';
   try {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('es-ES', {
@@ -27,53 +28,46 @@ export function formatDate(dateString: string): string {
       minute: '2-digit',
     }).format(date);
   } catch {
-    return dateString;
+    return dateString || '';
   }
 }
 
-export function getRoleBadgeColor(role: string): string {
+export function getRoleBadge(role: string): string {
+  const base = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold border ';
   switch (role) {
     case 'programador':
-      return 'bg-purple-900/60 text-purple-300 border-purple-500/50';
+      return base + 'bg-magenta/20 text-magenta border-magenta shadow-[0_0_10px_rgba(255,0,127,0.3)]';
     case 'admin':
-      return 'bg-red-900/60 text-red-300 border-red-500/50';
+      return base + 'bg-red-500/20 text-red-300 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.3)]';
     case 'revendedor_especial':
-      return 'bg-amber-900/60 text-amber-300 border-amber-500/50';
+      return base + 'bg-gold/20 text-gold border-gold shadow-[0_0_10px_rgba(251,191,36,0.3)]';
     case 'revendedor':
-      return 'bg-yellow-900/60 text-yellow-300 border-yellow-500/50';
+      return base + 'bg-ice/20 text-ice border-ice shadow-[0_0_10px_rgba(125,211,252,0.3)]';
     case 'cliente_especial':
-      return 'bg-blue-900/60 text-blue-300 border-blue-500/50';
+      return base + 'bg-neon/20 text-neon border-neon';
     default:
-      return 'bg-slate-800 text-slate-300 border-slate-700';
+      return base + 'bg-navy/80 text-ice/80 border-neon/20';
   }
 }
 
-export function getOrderStatusBadge(status: string): { label: string; className: string } {
+export const getRoleBadgeColor = getRoleBadge;
+
+export function getOrderStatusBadge(status: string): string {
+  const base = 'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono uppercase font-bold border ';
   switch (status) {
     case 'nuevo':
-      return {
-        label: 'Nuevo / Por Revisar',
-        className: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30',
-      };
+      return base + 'bg-gold/15 text-gold border-gold/40 shadow-[0_0_10px_rgba(251,191,36,0.2)]';
     case 'confirmado':
-      return {
-        label: 'Confirmado / En Proceso',
-        className: 'bg-blue-500/10 text-blue-400 border border-blue-500/30',
-      };
+      return base + 'bg-neon/15 text-neon border-neon/50 shadow-[0_0_10px_rgba(0,210,255,0.25)]';
     case 'entregado':
-      return {
-        label: 'Servicio Entregado',
-        className: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
-      };
+      return base + 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
     case 'rechazado':
-      return {
-        label: 'Rechazado',
-        className: 'bg-rose-500/10 text-rose-400 border border-rose-500/30',
-      };
+      return base + 'bg-magenta/15 text-magenta border-magenta/40 shadow-[0_0_10px_rgba(255,0,127,0.2)]';
+    case 'aprobada':
+      return base + 'bg-neon/15 text-neon border-neon/50 shadow-[0_0_10px_rgba(0,210,255,0.25)]';
+    case 'pendiente':
+      return base + 'bg-gold/15 text-gold border-gold/40 shadow-[0_0_10px_rgba(251,191,36,0.2)]';
     default:
-      return {
-        label: status,
-        className: 'bg-slate-800 text-slate-400 border border-slate-700',
-      };
+      return base + 'bg-navy/60 text-ice/60 border-neon/20';
   }
 }

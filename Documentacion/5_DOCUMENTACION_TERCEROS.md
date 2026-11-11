@@ -30,3 +30,4 @@ Este documento enumera todos los servicios en la nube, librerías externas, fram
 
 ## 3. Tipografías y Recursos Estéticos
 - **Google Fonts (Geist / Inter / Rajdhani):** Tipografías abiertas con licencia SIL Open Font License, optimizadas mediante `next/font` para carga ultrarrápida sin bloqueos de renderizado.
+

@@ -45,3 +45,4 @@ CREATE POLICY "catalogo_gestion_admin" ON storage.objects
 FOR ALL TO authenticated
 USING (bucket_id = 'catalogo' AND public.is_admin_or_programador())
 WITH CHECK (bucket_id = 'catalogo' AND public.is_admin_or_programador());
+

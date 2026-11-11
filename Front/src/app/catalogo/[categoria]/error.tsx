@@ -1,38 +1,36 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
-import { AlertCircle, RotateCcw, ArrowLeft } from 'lucide-react';
 
-export default function CategoriaError({
+export default function CategoryError({
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      <div className="p-8 rounded-2xl bg-surface-card border border-rose-500/30 shadow-glow-red">
-        <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-7 h-7" />
+    <div className="container mx-auto px-4 py-16 text-center">
+      <div className="cyber-panel max-w-lg mx-auto p-8 rounded-2xl border-neon/40 shadow-neon">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-magenta/15 border border-magenta flex items-center justify-center text-magenta">
+          ⚠️
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Error en esta Categoría</h2>
-        <p className="text-sm text-slate-400 mb-6">
-          Hubo un problema al cargar las subcategorías correspondientes. Puedes volver al catálogo o reintentar.
+        <h2 className="text-xl font-bold uppercase tracking-wider text-pure mb-2">
+          Subcategoría Aislada
+        </h2>
+        <p className="text-xs text-ice/80 font-mono mb-6">
+          Esta categoría no pudo ser cargada. Los demás niveles del catálogo siguen operativos.
         </p>
-        <div className="flex justify-center gap-3">
+        <div className="flex gap-3 justify-center">
           <button
             onClick={() => reset()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-primary hover:bg-brand-hover transition-colors"
+            className="btn-ice-pill px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
           >
-            <RotateCcw className="w-4 h-4" />
             Reintentar
           </button>
           <Link
             href="/catalogo"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 bg-surface-hover hover:bg-surface-border border border-slate-700 transition-colors"
+            className="btn-neon-pill px-5 py-2.5 text-xs font-bold uppercase tracking-wider inline-flex items-center"
           >
-            <ArrowLeft className="w-4 h-4" />
             Volver al Catálogo
           </Link>
         </div>
@@ -40,3 +38,4 @@ export default function CategoriaError({
     </div>
   );
 }
+

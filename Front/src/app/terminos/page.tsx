@@ -1,27 +1,54 @@
-import React from 'react';
+import Link from 'next/link';
 
 export default function TerminosPage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
-      <h1 className="text-3xl font-black text-white">Términos y Condiciones del Servicio</h1>
-      <p className="text-sm text-slate-400">Última actualización: Noviembre 2026</p>
+    <div className="container mx-auto px-4 sm:px-6 py-12 max-w-4xl">
+      <nav className="flex items-center gap-2 text-xs font-mono text-ice/60 mb-6">
+        <Link href="/" className="hover:text-neon">Inicio</Link>
+        <span>/</span>
+        <span className="text-pure font-bold">Términos del Servicio</span>
+      </nav>
 
-      <section className="space-y-4 text-sm text-slate-300 leading-relaxed">
-        <h2 className="text-lg font-bold text-white">1. Objeto del Servicio</h2>
-        <p>
-          RM & Masha es una plataforma intermediaria dedicada a la recarga de diamantes, pases y artículos virtuales para Free Fire y otros videojuegos mediante el ID oficial de jugador proporcionado por el usuario.
-        </p>
+      <div className="cyber-panel rounded-3xl p-8 md:p-12 border-neon/30">
+        <h1 className="text-2xl md:text-3xl font-black text-pure uppercase tracking-wider mb-6">
+          Términos y <span className="text-neon">Condiciones</span>
+        </h1>
 
-        <h2 className="text-lg font-bold text-white">2. Responsabilidad sobre los Datos Suministrados</h2>
-        <p>
-          El usuario es el único responsable de ingresar correctamente su ID de jugador. RM & Masha no se hace responsable por diamantes recargados a un ID erróneo provisto por el comprador. En ningún momento solicitamos contraseñas de cuentas de juego ni accesos a redes sociales.
-        </p>
+        <div className="space-y-6 text-xs md:text-sm font-mono text-ice/80 leading-relaxed">
+          <p>
+            Al utilizar los servicios de <strong className="text-pure">RM & Masha</strong>, aceptas plenamente las siguientes condiciones de entrega y uso de la billetera digital para recargas de videojuegos.
+          </p>
 
-        <h2 className="text-lg font-bold text-white">3. Billetera y Saldo Interno</h2>
-        <p>
-          El saldo interno de la billetera (Wallet) se acredita tras la validación del comprobante de depósito bancario. Las compras realizadas con saldo son irreversibles una vez confirmadas y entregadas en el juego.
-        </p>
-      </section>
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            1. Veracidad del ID de Jugador
+          </h2>
+          <p>
+            El cliente es el único responsable de ingresar correctamente el ID (UID) de jugador en Free Fire u otros videojuegos. Una vez acreditados los diamantes en el ID suministrado por el comprador, la transacción es irreversible.
+          </p>
+
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            2. Sistema de Saldo (Wallet)
+          </h2>
+          <p>
+            El saldo depositado en la plataforma es de uso exclusivo para adquirir servicios y recargas dentro del ecosistema de RM & Masha. Las compras con saldo se procesan de forma automatizada mediante procedimientos atómicos protegidos por base de datos.
+          </p>
+
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            3. Verificación de Comprobantes de Pago
+          </h2>
+          <p>
+            Cualquier intento de alteración o falsificación de comprobantes de transferencia bancaria conllevará a la suspensión inmediata de la cuenta y bloqueo definitivo del ID de usuario.
+          </p>
+
+          <h2 className="text-base font-bold text-pure uppercase pt-4 border-t border-neon/15">
+            4. Precios Dinámicos por Rol
+          </h2>
+          <p>
+            Los precios para revendedores están sujetos a la permanencia y volumen acordado. La administración se reserva el derecho de ajustar los roles de usuario según su actividad comercial.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
+

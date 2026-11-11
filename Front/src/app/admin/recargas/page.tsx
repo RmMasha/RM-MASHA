@@ -1,253 +1,234 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { BalanceRecharge, RechargeStatus } from '@/types/database.types';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  Loader2,
-  AlertTriangle,
-  Wallet,
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { formatCurrency, formatDate, getOrderStatusBadge } from '@/lib/utils';
 
 export default function AdminRecargasPage() {
-  const supabase = createClient();
-
-  const [filterStatus, setFilterStatus] = useState<RechargeStatus>('pendiente');
-  const [recharges, setRecharges] = useState<BalanceRecharge[]>([]);
+  const { user } = useAuth();
+  const [recharges, setRecharges] = useState<any[]>([]);
+  const [filterState, setFilterState] = useState<'pendiente' | 'aprobada' | 'rechazada' | 'todos'>('pendiente');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-  // Visor de Comprobante
-  const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
-
-  // Modal Rechazo
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-
-  const loadRecharges = useCallback(async () => {
+  const fetchRecharges = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('balance_recharges')
-        .select('*, users(nombre, email, whatsapp, saldo_actual), payment_methods(*)')
-        .eq('estado', filterStatus)
-        .order('created_at', { ascending: false });
+        .select('*, users(id, nombre, email, whatsapp, rol, saldo_actual)')
+        .order('fecha', { ascending: false });
 
-      if (data && !error) {
-        setRecharges(data as BalanceRecharge[]);
+      if (filterState !== 'todos') {
+        query = query.eq('estado', filterState);
       }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setRecharges(data || []);
     } catch (err) {
-      console.error('Error al cargar recargas:', err);
+      console.error('Error fetching recharges:', err);
     } finally {
       setLoading(false);
     }
-  }, [supabase, filterStatus]);
+  };
 
   useEffect(() => {
-    loadRecharges();
-  }, [loadRecharges]);
+    fetchRecharges();
+  }, [filterState]);
 
-  // APROBAR RECARGA (Llama al RPC de Postgres para suma atómica y notificación)
-  const handleApproveRecharge = async (recargaId: string) => {
-    if (!confirm('¿Confirmas que recibiste los fondos y deseas acreditar el saldo a este usuario?')) {
-      return;
-    }
+  // Aprobar recarga llamando al Stored Procedure atómico de PostgreSQL: aprobar_recarga_saldo
+  const handleAprobar = async (recargaId: string) => {
+    if (!user) return;
+    if (!confirm('¿Confirmas que verificaste el comprobante y deseas aprobar esta recarga de saldo?')) return;
 
-    setActionLoading(recargaId);
     try {
+      setActionLoading(recargaId);
       const { data, error } = await supabase.rpc('aprobar_recarga_saldo', {
         p_recarga_id: recargaId,
       });
 
       if (error) throw error;
-
-      alert(`¡Saldo acreditado con éxito! Nuevo saldo del usuario: ${formatCurrency(data.nuevo_saldo)}.`);
-      loadRecharges();
+      alert('¡Recarga aprobada exitosamente y saldo acreditado!');
+      await fetchRecharges();
     } catch (err: any) {
-      alert('Error al aprobar recarga: ' + err.message);
+      console.error('Error al aprobar recarga:', err);
+      alert('Error: ' + err.message);
     } finally {
       setActionLoading(null);
     }
   };
 
-  // RECHAZAR RECARGA (Llama al RPC con motivo)
-  const handleRejectRecharge = async () => {
-    if (!rejectingId) return;
-    setActionLoading(rejectingId);
+  // Rechazar recarga llamando al Stored Procedure: rechazar_recarga_saldo
+  const handleRechazar = async (recargaId: string) => {
+    if (!user) return;
+    const motivo = prompt('Por favor ingresa el motivo del rechazo para notificar al usuario:');
+    if (!motivo) return;
 
     try {
-      const { error } = await supabase.rpc('rechazar_recarga_saldo', {
-        p_recarga_id: rejectingId,
-        p_motivo: rejectReason.trim() || 'Comprobante bancario no válido o fondos no recibidos.',
+      setActionLoading(recargaId);
+      const { data, error } = await supabase.rpc('rechazar_recarga_saldo', {
+        p_recarga_id: recargaId,
+        p_motivo: motivo.trim(),
       });
 
       if (error) throw error;
-
-      setRejectingId(null);
-      setRejectReason('');
-      loadRecharges();
+      alert('Recarga rechazada y notificación enviada al cliente.');
+      await fetchRecharges();
     } catch (err: any) {
-      alert('Error al rechazar recarga: ' + err.message);
+      console.error('Error al rechazar recarga:', err);
+      alert('Error: ' + err.message);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Ver comprobante con URL firmada
+  const handleViewReceipt = async (comprobantePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('comprobantes')
+        .createSignedUrl(comprobantePath, 300);
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        setPreviewImageUrl(data.signedUrl);
+      }
+    } catch (err: any) {
+      alert('No se pudo cargar el comprobante: ' + err.message);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-black text-white">Gestión de Recargas de Saldo</h2>
-        <p className="text-xs text-slate-400">
-          Revisa y valida los comprobantes de depósito para acreditar saldo en las billeteras de los usuarios.
-        </p>
-      </div>
-
-      {/* FILTROS */}
-      <div className="flex border-b border-surface-border gap-4">
-        <button
-          onClick={() => setFilterStatus('pendiente')}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 ${
-            filterStatus === 'pendiente'
-              ? 'text-amber-400 border-b-2 border-amber-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          Pendientes de Aprobación
-        </button>
+      {/* Cabecera */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[11px] font-mono uppercase mb-2">
+            <span>❄</span> Módulo 6.2: Gestión de Saldo
+          </div>
+          <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+            Solicitudes de Recarga de Saldo
+          </h1>
+          <p className="text-xs text-ice/70 font-mono mt-1">
+            Revisión de comprobantes y acreditación automática mediante función atómica PostgreSQL.
+          </p>
+        </div>
 
         <button
-          onClick={() => setFilterStatus('aprobada')}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 ${
-            filterStatus === 'aprobada'
-              ? 'text-emerald-400 border-b-2 border-emerald-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
+          onClick={() => fetchRecharges()}
+          className="btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
         >
-          <CheckCircle className="w-4 h-4" />
-          Aprobadas
-        </button>
-
-        <button
-          onClick={() => setFilterStatus('rechazada')}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 ${
-            filterStatus === 'rechazada'
-              ? 'text-rose-400 border-b-2 border-rose-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <XCircle className="w-4 h-4" />
-          Rechazadas
+          <span>↻</span> Actualizar
         </button>
       </div>
 
-      {/* TABLA DE RECARGAS */}
-      <div className="bg-surface-card border border-surface-border rounded-3xl overflow-hidden shadow-xl">
+      {/* Filtros */}
+      <div className="flex gap-2 border-b border-neon/20 pb-2 overflow-x-auto">
+        {(['pendiente', 'aprobada', 'rechazada', 'todos'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setFilterState(tab)}
+            className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
+              filterState === tab
+                ? 'btn-neon-pill font-bold shadow-neon'
+                : 'text-ice/70 hover:text-white hover:bg-navy/60'
+            }`}
+          >
+            {tab === 'pendiente'
+              ? 'Pendientes de Revisión'
+              : tab === 'aprobada'
+              ? 'Aprobadas'
+              : tab === 'rechazada'
+              ? 'Rechazadas'
+              : 'Ver Todas'}
+          </button>
+        ))}
+      </div>
+
+      {/* Tabla */}
+      <div className="cyber-panel rounded-2xl overflow-hidden border-neon/30">
         {loading ? (
-          <div className="p-16 text-center text-slate-400 text-sm">
+          <div className="p-12 text-center text-xs font-mono text-ice">
             Cargando solicitudes de recarga...
           </div>
         ) : recharges.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-sm">
-            No hay recargas con este estado.
+          <div className="p-12 text-center text-xs font-mono text-ice/60">
+            No hay solicitudes de recarga en esta categoría.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface/80 text-slate-400 uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Fecha</th>
-                  <th className="px-5 py-3 font-semibold">Usuario</th>
-                  <th className="px-5 py-3 font-semibold">Método / Ref</th>
-                  <th className="px-5 py-3 font-semibold">Monto Solicitado</th>
-                  <th className="px-5 py-3 font-semibold">Saldo Actual</th>
-                  <th className="px-5 py-3 font-semibold text-right">Acción</th>
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-neon/20 text-ice/70 bg-pitch/80">
+                  <th className="py-3.5 px-4">Fecha</th>
+                  <th className="py-3.5 px-4">Usuario</th>
+                  <th className="py-3.5 px-4">Monto Solicitado</th>
+                  <th className="py-3.5 px-4">Canal / Referencia</th>
+                  <th className="py-3.5 px-4">Comprobante</th>
+                  <th className="py-3.5 px-4">Estado</th>
+                  <th className="py-3.5 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
-                {recharges.map((rec) => {
-                  const isActioning = actionLoading === rec.id;
+              <tbody className="divide-y divide-neon/10">
+                {recharges.map((r) => {
+                  const recId = r.id || r.recarga_id;
+                  const recFecha = r.created_at || r.fecha;
+                  const recMetodo = r.payment_methods?.nombre_metodo || r.metodo_pago || (r.referencia_pago ? `Ref: ${r.referencia_pago}` : 'Transferencia');
                   return (
-                    <tr key={rec.id} className="hover:bg-surface-hover/30 transition-colors">
-                      <td className="px-5 py-4 whitespace-nowrap text-slate-400">
-                        {formatDate(rec.created_at)}
+                    <tr key={recId} className="hover:bg-navy/40 transition-colors">
+                      <td className="py-3.5 px-4 text-ice/70">{formatDate(recFecha)}</td>
+                      <td className="py-3.5 px-4">
+                        <div className="text-pure font-bold">{r.users?.nombre || 'Usuario'}</div>
+                        <div className="text-[11px] text-ice/60">{r.users?.email}</div>
+                        <div className="text-[10px] text-gold font-bold">
+                          Saldo Actual: {formatCurrency(r.users?.saldo_actual || 0)}
+                        </div>
                       </td>
-
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="font-bold text-white block">
-                          {rec.users?.nombre || 'Usuario'}
+                      <td className="py-3.5 px-4 text-gold font-bold text-sm">
+                        {formatCurrency(r.monto)}
+                      </td>
+                      <td className="py-3.5 px-4 text-pure">{recMetodo}</td>
+                      <td className="py-3.5 px-4">
+                        {r.comprobante_url ? (
+                          <button
+                            type="button"
+                            onClick={() => handleViewReceipt(r.comprobante_url)}
+                            className="text-neon hover:text-white underline cursor-pointer"
+                          >
+                            Ver Comprobante 🔍
+                          </button>
+                        ) : (
+                          <span className="text-ice/40">Sin archivo</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={getOrderStatusBadge(r.estado)}>
+                          {r.estado}
                         </span>
-                        <span className="text-[10px] text-slate-400 block">
-                          {rec.users?.whatsapp || rec.users?.email}
-                        </span>
                       </td>
-
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="font-semibold text-slate-200 block">
-                          {rec.payment_methods?.nombre_metodo || 'Método Directo'}
-                        </span>
-                        <span className="font-mono text-[10px] text-brand-gold select-all block">
-                          Ref: {rec.referencia_pago || 'S/R'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const { data } = await supabase.storage
-                              .from('comprobantes')
-                              .createSignedUrl(rec.comprobante_url, 300);
-                            if (data?.signedUrl) setViewReceiptUrl(data.signedUrl);
-                          }}
-                          className="text-[10px] text-brand-primary underline flex items-center gap-1 mt-0.5 hover:text-white"
-                        >
-                          <Eye className="w-3 h-3" />
-                          Ver Captura
-                        </button>
-                      </td>
-
-                      <td className="px-5 py-4 font-black text-brand-gold whitespace-nowrap text-sm">
-                        +{formatCurrency(rec.monto)}
-                      </td>
-
-                      <td className="px-5 py-4 font-semibold text-slate-300 whitespace-nowrap">
-                        {formatCurrency(rec.users?.saldo_actual ?? 0)}
-                      </td>
-
-                      <td className="px-5 py-4 text-right whitespace-nowrap">
-                        {rec.estado === 'pendiente' ? (
-                          <div className="flex items-center justify-end gap-2">
+                      <td className="py-3.5 px-4 text-right">
+                        {r.estado === 'pendiente' ? (
+                          <div className="flex gap-2 justify-end">
                             <button
-                              disabled={isActioning}
-                              onClick={() => handleApproveRecharge(rec.id)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 font-bold text-xs flex items-center gap-1 shadow-glow-gold/10"
+                              disabled={actionLoading === recId}
+                              onClick={() => handleAprobar(recId)}
+                              className="px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase bg-neon/20 border border-neon text-neon hover:bg-neon hover:text-white transition-all disabled:opacity-50"
                             >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              Aprobar y Sumar Saldo
+                              ✓ Aprobar
                             </button>
                             <button
-                              disabled={isActioning}
-                              onClick={() => {
-                                setRejectingId(rec.id);
-                                setRejectReason('');
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 font-bold text-xs flex items-center gap-1"
+                              disabled={actionLoading === recId}
+                              onClick={() => handleRechazar(recId)}
+                              className="px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase bg-magenta/20 border border-magenta text-magenta hover:bg-magenta hover:text-white transition-all disabled:opacity-50"
                             >
-                              <XCircle className="w-3.5 h-3.5" />
-                              Rechazar
+                              ✕ Rechazar
                             </button>
                           </div>
-                        ) : rec.estado === 'aprobada' ? (
-                          <span className="text-xs text-emerald-400 font-bold">
-                            ✓ Saldo Acreditado
-                          </span>
                         ) : (
-                          <span className="text-xs text-rose-400 font-bold" title={rec.motivo_rechazo || ''}>
-                            Rechazada
-                          </span>
+                          <span className="text-xs font-mono text-ice/50">Procesado</span>
                         )}
                       </td>
                     </tr>
@@ -259,69 +240,34 @@ export default function AdminRecargasPage() {
         )}
       </div>
 
-      {/* MODAL VER COMPROBANTE */}
-      {viewReceiptUrl && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-xl w-full bg-surface-card border border-surface-border rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-white text-base">Comprobante de Depósito</h3>
+      {/* Modal Visor de Comprobante */}
+      {previewImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="cyber-panel p-6 rounded-2xl max-w-2xl w-full border-neon shadow-neon">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-bold uppercase tracking-wider text-pure">
+                Comprobante de Recarga
+              </h3>
               <button
-                onClick={() => setViewReceiptUrl(null)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => setPreviewImageUrl(null)}
+                className="text-pure hover:text-magenta font-bold text-xl"
               >
                 ✕
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-auto rounded-2xl bg-black flex items-center justify-center p-2">
+            <div className="max-h-[70vh] overflow-auto rounded-xl bg-pitch p-2 flex items-center justify-center">
               <img
-                src={viewReceiptUrl}
+                src={previewImageUrl}
                 alt="Comprobante"
-                className="max-w-full max-h-[60vh] object-contain rounded-xl"
+                className="max-w-full max-h-[65vh] object-contain rounded-lg"
               />
             </div>
-            <button
-              onClick={() => setViewReceiptUrl(null)}
-              className="w-full py-2.5 rounded-xl bg-surface-hover hover:bg-surface-border text-white text-xs font-bold transition-colors"
-            >
-              Cerrar Visor
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL RECHAZAR RECARGA */}
-      {rejectingId && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-surface-card border border-rose-500/30 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center gap-2 text-rose-500">
-              <AlertTriangle className="w-5 h-5" />
-              <h3 className="font-bold text-white text-base">Rechazar Solicitud de Recarga</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Indica la razón por la que no se aprueba esta recarga. El cliente recibirá este aviso en su cuenta.
-            </p>
-            <textarea
-              rows={3}
-              required
-              placeholder="Ej: El dinero no ha caído en la cuenta receptora o la captura es ilegible."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full p-3 rounded-xl bg-surface border border-surface-border text-white text-xs focus:outline-none focus:border-brand-primary"
-            />
-            <div className="flex gap-2 justify-end">
+            <div className="mt-4 flex justify-end">
               <button
-                type="button"
-                onClick={() => setRejectingId(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+                onClick={() => setPreviewImageUrl(null)}
+                className="btn-ice-pill px-5 py-2 text-xs font-bold uppercase tracking-wider"
               >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleRejectRecharge}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition-colors"
-              >
-                Confirmar Rechazo
+                Cerrar Visor
               </button>
             </div>
           </div>
@@ -330,3 +276,4 @@ export default function AdminRecargasPage() {
     </div>
   );
 }
+

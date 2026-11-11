@@ -4,103 +4,114 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import {
-  Shield,
-  ShoppingBag,
-  Wallet,
-  Layers,
-  CreditCard,
-  MessageSquare,
-  Bell,
-  ArrowLeft,
-  DollarSign,
-} from 'lucide-react';
+import { getRoleBadge } from '@/lib/utils';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+interface Props {
+  children: React.ReactNode;
+}
+
+export default function AdminLayout({ children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      if (!user || (profile?.rol !== 'admin' && profile?.rol !== 'programador')) {
-        router.push('/');
-      }
-    }
-  }, [user, profile, loading, router]);
+  const isStaff = profile?.rol === 'admin' || profile?.rol === 'programador';
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && (!user || !isStaff)) {
+      router.push('/login?redirect=' + encodeURIComponent(pathname));
+    }
+  }, [user, profile, loading, isStaff, pathname, router]);
+
+  if (loading || !user || !isStaff) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center text-slate-400 text-sm">
-        Verificando permisos de administración...
+      <div className="min-h-screen flex items-center justify-center p-6 text-center font-mono">
+        <div className="cyber-panel p-8 rounded-2xl max-w-md border-neon/40 shadow-neon">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-magenta/20 border border-magenta flex items-center justify-center text-magenta animate-pulse">
+            🔒
+          </div>
+          <h2 className="text-lg font-bold text-pure uppercase tracking-wider mb-2">
+            Verificando Credenciales de Comando
+          </h2>
+          <p className="text-xs text-ice/70">
+            Validando permisos administrativos y niveles de seguridad RLS...
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!user || (profile?.rol !== 'admin' && profile?.rol !== 'programador')) {
-    return null;
-  }
-
-  const adminNav = [
-    { label: 'Gestor de Pedidos', href: '/admin/pedidos', icon: ShoppingBag },
-    { label: 'Recargas de Saldo', href: '/admin/recargas', icon: Wallet },
-    { label: 'Ajuste Manual Saldo', href: '/admin/saldo-manual', icon: DollarSign },
-    { label: 'Catálogo & Precios', href: '/admin/catalogo', icon: Layers },
-    { label: 'Métodos de Pago', href: '/admin/metodos-pago', icon: CreditCard },
-    { label: 'Reseñas & Hero', href: '/admin/comentarios', icon: MessageSquare },
+  const navLinks = [
+    { href: '/admin/pedidos', label: 'Gestor de Pedidos', icon: '📦' },
+    { href: '/admin/recargas', label: 'Solicitudes de Recarga', icon: '💳' },
+    { href: '/admin/saldo-manual', label: 'Ajuste Manual de Saldo', icon: '⚡' },
+    { href: '/admin/catalogo', label: 'Catálogo & Precios por Rol', icon: '💎' },
+    { href: '/admin/metodos-pago', label: 'Métodos de Pago', icon: '🏦' },
+    { href: '/admin/comentarios', label: 'Reseñas & Comentarios', icon: '★' },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* HEADER DE ADMIN */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-surface-border gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/30 text-brand-primary flex items-center justify-center shadow-glow-red">
-            <Shield className="w-5 h-5" />
+    <div className="min-h-screen bg-navy flex flex-col md:flex-row">
+      {/* SIDEBAR ADMINISTRATIVO */}
+      <aside className="w-full md:w-64 lg:w-72 bg-pitch/95 border-b md:border-b-0 md:border-r border-neon/30 flex flex-col p-4 md:p-6 shrink-0 relative z-20">
+        {/* Cabecera del Sidebar */}
+        <div className="pb-6 mb-6 border-b border-neon/20">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-3 h-3 rounded-full bg-neon animate-pulse shadow-[0_0_10px_#00D2FF]" />
+            <span className="text-xs font-mono uppercase tracking-widest text-ice/70">
+              Terminal de Control
+            </span>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-white">Panel de Administración</h1>
-            <p className="text-xs text-slate-400">
-              Conectado como: <strong className="text-brand-gold">{profile.nombre}</strong> ({profile.rol})
-            </p>
+          <h2 className="text-xl font-black text-pure tracking-wider uppercase">
+            RM & <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon to-white">MASHA</span>
+          </h2>
+          <div className="flex items-center gap-2 mt-2">
+            <span className={getRoleBadge(profile?.rol || 'admin')}>
+              {profile?.rol}
+            </span>
+            <span className="text-[11px] font-mono text-ice/60 truncate">
+              {profile?.nombre}
+            </span>
           </div>
         </div>
 
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-surface-card hover:bg-surface-hover border border-surface-border transition-colors w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Volver a la Tienda
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* SIDEBAR DE NAVEGACIÓN */}
-        <aside className="lg:col-span-3 space-y-1">
-          {adminNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
+        {/* Enlaces de Navegación del Panel */}
+        <nav className="space-y-1.5 flex-1">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ${
                   isActive
-                    ? 'bg-brand-primary text-white shadow-glow-red'
-                    : 'text-slate-300 hover:text-white hover:bg-surface-card border border-transparent'
+                    ? 'btn-neon-pill font-bold shadow-neon'
+                    : 'text-ice/70 hover:text-white hover:bg-navy/60 hover:border-neon/30'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span>{item.label}</span>
+                <span className="text-base">{link.icon}</span>
+                <span>{link.label}</span>
               </Link>
             );
           })}
-        </aside>
+        </nav>
 
-        {/* CONTENIDO DE LA PÁGINA ADMIN */}
-        <main className="lg:col-span-9">{children}</main>
-      </div>
+        {/* Footer del Sidebar */}
+        <div className="pt-6 mt-6 border-t border-neon/20 space-y-2">
+          <Link
+            href="/"
+            className="w-full btn-ice-pill py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 text-ice"
+          >
+            <span>←</span> Volver a la Tienda
+          </Link>
+        </div>
+      </aside>
+
+      {/* ÁREA DE CONTENIDO PRINCIPAL */}
+      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
+        {children}
+      </main>
     </div>
   );
 }
+

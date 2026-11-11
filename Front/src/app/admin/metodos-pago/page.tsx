@@ -1,236 +1,192 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { PaymentMethod, PaymentFormatRule } from '@/types/database.types';
-import { CreditCard, Plus, Check, X, Loader2, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { PaymentMethod } from '@/types/database.types';
 
 export default function AdminMetodosPagoPage() {
-  const supabase = createClient();
-
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formulario nuevo método
+  // Formulario de creación
   const [nombre, setNombre] = useState('');
-  const [titular, setTitular] = useState('');
-  const [datosCuenta, setDatosCuenta] = useState('');
-  const [instrucciones, setInstrucciones] = useState('');
-  const [formato, setFormato] = useState<PaymentFormatRule>('alfanumerico');
-  const [regex, setRegex] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [formato, setFormato] = useState<'solo_numeros' | 'solo_letras' | 'alfanumerico'>('solo_numeros');
+  const [submitting, setSubmitting] = useState(false);
 
-  const loadMethods = useCallback(async () => {
+  const fetchMethods = async () => {
     try {
       setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('payment_methods')
         .select('*')
-        .order('created_at', { ascending: true });
-
-      if (data) setMethods(data as PaymentMethod[]);
+        .order('nombre_metodo', { ascending: true });
+      if (error) throw error;
+      setMethods(data || []);
     } catch (err) {
-      console.error('Error cargando métodos de pago:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  };
 
   useEffect(() => {
-    loadMethods();
-  }, [loadMethods]);
+    fetchMethods();
+  }, []);
 
-  const handleToggleActive = async (id: string, currentActive: boolean) => {
+  // Alternar estado activo/inactivo
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('payment_methods')
-        .update({ activo: !currentActive })
+        .update({ activo: !currentStatus })
         .eq('id', id);
 
-      setMethods((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, activo: !currentActive } : m))
-      );
+      if (error) throw error;
+      await fetchMethods();
     } catch (err: any) {
-      alert('Error al actualizar método: ' + err.message);
+      alert('Error: ' + err.message);
     }
   };
 
+  // Crear nuevo método
   const handleCreateMethod = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true);
+    if (!nombre.trim()) return;
 
     try {
+      setSubmitting(true);
       const { error } = await supabase.from('payment_methods').insert({
         nombre_metodo: nombre.trim(),
-        titular: titular.trim() || null,
-        numero_cuenta_o_dato: datosCuenta.trim() || null,
-        instrucciones: instrucciones.trim() || null,
         formato_requerido: formato,
-        regex_validacion: regex.trim() || null,
         activo: true,
       });
 
       if (error) throw error;
-
       setNombre('');
-      setTitular('');
-      setDatosCuenta('');
-      setInstrucciones('');
-      setRegex('');
-      loadMethods();
+      await fetchMethods();
     } catch (err: any) {
-      alert('Error al crear método de pago: ' + err.message);
+      alert('Error creando método: ' + err.message);
     } finally {
-      setCreating(false);
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-black text-white">Configuración de Métodos de Pago</h2>
-        <p className="text-xs text-slate-400">
-          Gestiona las opciones de depósito y pago directo para recargas de saldo y compras.
+      {/* Cabecera */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/15 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-2">
+          <span>❄</span> Módulo 6.4: Canales de Pago & Validación de Referencias
+        </div>
+        <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+          Métodos de Pago y Depósito
+        </h1>
+        <p className="text-xs text-ice/70 font-mono mt-1">
+          Habilita o deshabilita pasarelas (Binance, Pago Móvil, etc.) y especifica reglas de validación para la referencia.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* LISTADO DE MÉTODOS EXISTENTES (7 COLS) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bg-surface-card border border-surface-border rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-white text-sm">Métodos de Pago Configurados</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Formulario de Alta (5 COLS) */}
+        <div className="lg:col-span-5 cyber-panel rounded-2xl p-6 border-neon/30">
+          <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+            Nuevo Canal de Pago
+          </h2>
 
-            {loading ? (
-              <div className="p-8 text-center text-xs text-slate-400">Cargando métodos...</div>
-            ) : methods.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400">No hay métodos registrados.</div>
-            ) : (
-              <div className="space-y-3">
-                {methods.map((m) => (
-                  <div
-                    key={m.id}
-                    className="p-4 rounded-2xl bg-surface border border-surface-border flex items-start justify-between gap-4"
-                  >
-                    <div className="space-y-1 text-xs">
-                      <div className="flex items-center gap-2">
-                        <strong className="text-white text-sm">{m.nombre_metodo}</strong>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            m.activo
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                          }`}
-                        >
-                          {m.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
-                      {m.titular && <p className="text-slate-400">Titular: {m.titular}</p>}
-                      {m.numero_cuenta_o_dato && (
-                        <p className="font-mono text-brand-gold select-all font-semibold">
-                          {m.numero_cuenta_o_dato}
-                        </p>
-                      )}
-                      <p className="text-[11px] text-slate-500">
-                        Formato de referencia: <span className="text-white font-mono">{m.formato_requerido}</span>
-                      </p>
-                    </div>
+          <form onSubmit={handleCreateMethod} className="space-y-4">
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Nombre del Canal / Banco:
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ej: Binance Pay (USDT)"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              />
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(m.id, m.activo)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                        m.activo
-                          ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-                          : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                      }`}
-                    >
-                      {m.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Formato de Referencia Requerido:
+              </label>
+              <select
+                value={formato}
+                onChange={(e) => setFormato(e.target.value as any)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+              >
+                <option value="solo_numeros">Solo Números (Ej: Pago Móvil / Depósito)</option>
+                <option value="alfanumerico">Alfanumérico (Ej: Binance TxID / Hash)</option>
+                <option value="solo_letras">Solo Letras</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full btn-neon-pill py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 mt-2"
+            >
+              {submitting ? 'Guardando...' : '+ Agregar Método de Pago'}
+            </button>
+          </form>
         </div>
 
-        {/* CREAR NUEVO MÉTODO (5 COLS) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-surface-card border border-surface-border rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <Plus className="w-4 h-4 text-brand-primary" />
-              Nuevo Método de Pago
-            </h3>
+        {/* Lista de Métodos (7 COLS) */}
+        <div className="lg:col-span-7 cyber-panel rounded-2xl p-6 border-neon/30">
+          <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-gold shadow-[0_0_8px_#FBBF24]" />
+            Canales Configurados ({methods.length})
+          </h2>
 
-            <form onSubmit={handleCreateMethod} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Nombre del Método</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: Binance Pay / Pago Móvil"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-surface-border text-white focus:outline-none focus:border-brand-primary"
-                />
-              </div>
+          {loading ? (
+            <div className="text-center py-8 text-xs font-mono text-ice">Cargando métodos...</div>
+          ) : methods.length === 0 ? (
+            <div className="text-center py-8 text-xs font-mono text-ice/60">No hay métodos registrados.</div>
+          ) : (
+            <div className="space-y-3">
+              {methods.map((m) => {
+                const methodId = m.id || m.metodo_id || '';
+                return (
+                  <div
+                    key={methodId}
+                    className="p-4 rounded-xl bg-navy/60 border border-neon/20 flex items-center justify-between"
+                  >
+                    <div>
+                      <h3 className="font-bold text-pure text-sm">{m.nombre_metodo}</h3>
+                      <div className="text-[11px] font-mono text-ice/70 flex items-center gap-2 mt-0.5">
+                        <span>Validación:</span>
+                        <span className="text-neon">{m.formato_requerido}</span>
+                      </div>
+                    </div>
 
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Titular de la Cuenta</label>
-                <input
-                  type="text"
-                  placeholder="Ej: RM & Masha C.A."
-                  value={titular}
-                  onChange={(e) => setTitular(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-surface-border text-white focus:outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Número de Cuenta / Correo / PayID</label>
-                <input
-                  type="text"
-                  placeholder="Ej: 0134-1234-5678... o PayID"
-                  value={datosCuenta}
-                  onChange={(e) => setDatosCuenta(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-surface-border text-white focus:outline-none focus:border-brand-primary font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Regla de Formato Requerida</label>
-                <select
-                  value={formato}
-                  onChange={(e) => setFormato(e.target.value as PaymentFormatRule)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-surface-border text-white focus:outline-none focus:border-brand-primary"
-                >
-                  <option value="alfanumerico">Alfanumérico (Letras y números)</option>
-                  <option value="solo_numeros">Solo Números</option>
-                  <option value="solo_letras">Solo Letras</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Instrucciones al Cliente</label>
-                <textarea
-                  rows={2}
-                  placeholder="Ej: Enviar USDT mediante red BSC o PayID. Enviar captura."
-                  value={instrucciones}
-                  onChange={(e) => setInstrucciones(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-surface-border text-white focus:outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full py-2.5 rounded-xl font-bold text-white bg-brand-primary hover:bg-brand-hover shadow-glow-red transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
-              >
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Registrar Método de Pago'}
-              </button>
-            </form>
-          </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-mono uppercase font-bold ${
+                          m.activo
+                            ? 'bg-neon/15 text-neon border border-neon/30'
+                            : 'bg-magenta/15 text-magenta border border-magenta/30'
+                        }`}
+                      >
+                        {m.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                      <button
+                        onClick={() => handleToggleActive(methodId, m.activo)}
+                        className="btn-ice-pill px-3 py-1 text-[11px] font-mono uppercase"
+                      >
+                        {m.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

@@ -88,3 +88,43 @@ Este documento registra cada incidencia, advertencia, bloqueo o fallo detectado 
 - **Causa Raíz:** El script de migración contenía el token de acceso de Supabase en un valor de respaldo por defecto en el código fuente. GitHub Secret Scanning detectó el token y bloqueó el `push` al repositorio remoto para salvaguardar la seguridad de la infraestructura.
 - **Solución Implementada:** Se eliminó cualquier token o credencial estática del código fuente de `back/scripts/migrate.js`, leyéndose únicamente desde `process.env.SUPABASE_ACCESS_TOKEN` o desde un archivo `.env` local estrictamente excluido por `.gitignore`. Se ejecutó `git commit --amend` para purgar completamente el secreto del historial de Git.
 - **Estado:** `[RESUELTO]`
+
+### [ERR-20261111-010]
+- **Fecha y Hora Exacta:** 11/11/2026 - 06:27:19 PM (UTC-4)
+- **Módulo / Componente:** Cliente de Navegador Supabase (`Front/src/lib/supabase/client.ts` y páginas administrativas / catálogo)
+- **Descripción del Error:** `Type error: Module '"@/lib/supabase/client"' has no exported member 'supabase'`.
+- **Causa Raíz:** El archivo `client.ts` solo exportaba la función factoría `createClient()`, mientras que múltiples componentes clientes requerían una instancia singleton `supabase` exportada para llamadas directas y suscripciones.
+- **Solución Implementada:** Se añadió y exportó la instancia cliente singleton `export const supabase = createClient();` en `Front/src/lib/supabase/client.ts`.
+- **Estado:** `[RESUELTO]`
+
+### [ERR-20261111-011]
+- **Fecha y Hora Exacta:** 11/11/2026 - 06:28:12 PM (UTC-4)
+- **Módulo / Componente:** Exportaciones de Componentes (`Navbar.tsx`, `Footer.tsx`, `Snowfall.tsx`, `HeroChristmas.tsx`)
+- **Descripción del Error:** `Attempted import error: '@/components/common/Snowfall' does not contain a default export (imported as 'Snowfall')` (y equivalente para Navbar, Footer y HeroChristmas).
+- **Causa Raíz:** Los cuatro componentes fueron declarados con exportación nombrada (`export function Component()`) pero el diseño de `layout.tsx` y `page.tsx` los importaba usando la sintaxis de exportación por defecto (`import Component from '@/...'`).
+- **Solución Implementada:** Se agregó la sentencia explícita `export default Component;` al final de cada uno de los cuatro componentes afectados, manteniendo compatibilidad con ambas sintaxis de importación.
+- **Estado:** `[RESUELTO]`
+
+### [ERR-20261111-012]
+- **Fecha y Hora Exacta:** 11/11/2026 - 06:29:45 PM (UTC-4)
+- **Módulo / Componente:** Tipado e Integración de Esquema Relacional (`Front/src/types/database.types.ts` y CRUDs de `/admin/`)
+- **Descripción del Error:** `Type error: Property 'categoria_id' does not exist on type 'Category'`.
+- **Causa Raíz:** En las migraciones PostgreSQL de Supabase, las claves primarias de las tablas relacionales (`categories`, `products`, `variants`, `orders`, `balance_recharges`, `payment_methods`, `reviews`) están definidas uniformemente como `id UUID PRIMARY KEY`, mientras que ciertas vistas de la interfaz hacían referencia a claves con prefijo (`categoria_id`, `subcategoria_id`, etc.). Asimismo, en `balance_recharges` el método de pago se almacena mediante la clave foránea `metodo_pago_id UUID` y `referencia_pago TEXT` (no mediante una columna de texto plano).
+- **Solución Implementada:** Se actualizaron las interfaces en `database.types.ts` para proveer compatibilidad bi-direccional (`id` y alias opcionales), se ajustaron las consultas y mapeos para usar `id` como clave principal, y se alinearon las inserciones de depósitos en `BilleteraClient.tsx` para suministrar `metodo_pago_id` y `referencia_pago` con sus tipos exactos.
+- **Estado:** `[RESUELTO]`
+
+### [ERR-20261111-013]
+- **Fecha y Hora Exacta:** 11/11/2026 - 06:39:22 PM (UTC-4)
+- **Módulo / Componente:** Componente de Partículas de Nieve (`Front/src/components/common/Snowfall.tsx` / `Front/src/app/layout.tsx`)
+- **Descripción del Error:** `Type error: Type '{ count: number; }' is not assignable to type 'IntrinsicAttributes'. Property 'count' does not exist on type 'IntrinsicAttributes'`.
+- **Causa Raíz:** El componente `Snowfall` inicializaba un número estático de copos sin declarar la interfaz de propiedades correspondientes (`SnowfallProps`), provocando el rechazo por parte del chequeador estricto de JSX al recibir `<Snowfall count={45} />`.
+- **Solución Implementada:** Se definió la interfaz `interface SnowfallProps { count?: number; }` y se actualizó la función `export function Snowfall({ count = 35 }: SnowfallProps = {})` incluyendo la dependencia en su `useEffect`.
+- **Estado:** `[RESUELTO]`
+
+### [ERR-20261111-014]
+- **Fecha y Hora Exacta:** 11/11/2026 - 06:41:15 PM (UTC-4)
+- **Módulo / Componente:** Contexto de Autenticación y Utilidad de Formato de Fechas (`AuthContext.tsx`, `LoginClient.tsx`, `utils.ts`)
+- **Descripción del Error:** `Type error: Property 'signIn' does not exist on type 'AuthContextType'` y `Type error: Argument of type 'string | undefined' is not assignable to parameter of type 'string' in formatDate`.
+- **Causa Raíz:** 1) `AuthContextType` carecía de los métodos de conveniencia `signIn` y `signUp`, forzando a los clientes de autenticación a lidiar con tipados no sincronizados. 2) La función `formatDate` requería un parámetro `string` no nulo, pero los campos de fecha de notificaciones y tablas pueden ser opcionales antes de la hidratación de datos.
+- **Solución Implementada:** Se incorporaron los métodos `signIn` y `signUp` en `AuthContext` delegando a `supabase.auth.signInWithPassword` y `supabase.auth.signUp`, y se actualizó la firma de `formatDate` a `formatDate(dateString?: string | null): string`, retornando una cadena vacía segura ante valores nulos o indefinidos.
+- **Estado:** `[RESUELTO]`

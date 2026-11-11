@@ -1,118 +1,113 @@
-import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Category, Subcategory } from '@/types/database.types';
-import { ChevronRight, ArrowRight, Layers, Home } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps {
+interface Props {
   params: {
     categoria: string;
   };
 }
 
-async function getCategoryAndSubcategories(slug: string): Promise<{
-  category: Category | null;
-  subcategories: Subcategory[];
-}> {
-  try {
-    const supabase = createClient();
-    const { data: category } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('slug', slug)
-      .eq('activo', true)
-      .single();
+export default async function CategoriaNivelPage({ params }: Props) {
+  const supabase = createClient();
+  const { categoria: categoriaSlug } = params;
 
-    if (!category) return { category: null, subcategories: [] };
+  // 1. Obtener la categoría
+  const { data: categoria } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('slug', categoriaSlug)
+    .single();
 
-    const { data: subcategories } = await supabase
-      .from('subcategories')
-      .select('*')
-      .eq('categoria_id', category.id)
-      .eq('activo', true)
-      .order('orden', { ascending: true });
-
-    return {
-      category: category as Category,
-      subcategories: (subcategories as Subcategory[]) || [],
-    };
-  } catch (error) {
-    console.error('Error fetching subcategories:', error);
-    return { category: null, subcategories: [] };
-  }
-}
-
-export default async function CategoriaPage({ params }: PageProps) {
-  const { category, subcategories } = await getCategoryAndSubcategories(params.categoria);
-
-  if (!category) {
+  if (!categoria) {
     notFound();
   }
 
+  // 2. Obtener las subcategorías activas
+  const catId = (categoria as Category).id || (categoria as Category).categoria_id;
+  const { data: subcategorias } = await supabase
+    .from('subcategories')
+    .select('*')
+    .eq('categoria_id', catId)
+    .eq('activo', true)
+    .order('orden', { ascending: true });
+
+  const subList: Subcategory[] = subcategorias || [];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* BREADCRUMB */}
-      <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 mb-8">
-        <Link href="/" className="hover:text-white flex items-center gap-1">
-          <Home className="w-3.5 h-3.5" />
-          Inicio
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <Link href="/catalogo" className="hover:text-white">
-          Catálogo
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <span className="text-brand-primary font-bold">{category.nombre}</span>
+    <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
+      {/* Miga de Pan (Breadcrumb) */}
+      <nav className="flex items-center gap-2 text-xs font-mono text-ice/60 mb-6">
+        <Link href="/" className="hover:text-neon transition-colors">Inicio</Link>
+        <span>/</span>
+        <Link href="/catalogo" className="hover:text-neon transition-colors">Catálogo</Link>
+        <span>/</span>
+        <span className="text-pure font-bold">{(categoria as Category).nombre}</span>
       </nav>
 
-      {/* HEADER */}
-      <div className="mb-10 space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          {category.nombre}
-        </h1>
-        <p className="text-sm sm:text-base text-slate-400 max-w-2xl">
-          {category.descripcion || 'Selecciona el tipo de servicio o recarga deseada para continuar.'}
-        </p>
+      {/* Cabecera de Categoría */}
+      <div className="cyber-panel rounded-3xl p-6 md:p-10 mb-10 border-neon/30 relative overflow-hidden">
+        <div className="max-w-2xl relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/10 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-3">
+            <span>❄</span> Nivel 2: Subcategorías
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black text-pure uppercase tracking-wider">
+            {(categoria as Category).nombre}
+          </h1>
+          <p className="text-xs md:text-sm text-ice/80 font-mono mt-2 leading-relaxed">
+            {(categoria as Category).descripcion || 'Selecciona una subcategoría para ver los paquetes de diamantes y servicios disponibles.'}
+          </p>
+        </div>
       </div>
 
-      {/* SUBCATEGORIES GRID */}
-      {subcategories.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-surface-card border border-surface-border text-center text-slate-400">
-          No hay subcategorías activas en este momento.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {subcategories.map((subcat) => (
-            <Link
-              key={subcat.id}
-              href={`/catalogo/${params.categoria}/${subcat.slug}`}
-              className="group rounded-3xl bg-surface-card border border-surface-border p-6 hover:border-brand-primary/60 transition-all hover:scale-[1.02] shadow-xl flex flex-col justify-between glow-border"
-            >
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-surface-hover flex items-center justify-center text-brand-cyan group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                  <Layers className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-white group-hover:text-brand-primary transition-colors">
-                  {subcat.nombre}
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  {subcat.descripcion || 'Ver todos los paquetes y opciones de este servicio.'}
-                </p>
-              </div>
+      {/* Grid de Subcategorías */}
+      <div className="mb-10">
+        <h2 className="text-xl font-bold uppercase tracking-wider text-pure mb-6 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+          Subcategorías Disponibles ({subList.length})
+        </h2>
 
-              <div className="pt-6 mt-4 border-t border-surface-border flex items-center justify-between text-xs font-bold text-slate-300 group-hover:text-white">
-                <span>Ver productos</span>
-                <div className="w-7 h-7 rounded-full bg-surface-hover flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                  <ArrowRight className="w-3.5 h-3.5" />
+        {subList.length === 0 ? (
+          <div className="cyber-panel rounded-2xl p-10 text-center">
+            <p className="text-sm font-mono text-ice/70">
+              No hay subcategorías activas en esta sección por el momento.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subList.map((sub, idx) => (
+              <Link
+                key={sub.id || sub.subcategoria_id}
+                href={`/catalogo/${categoriaSlug}/${sub.slug}`}
+                className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-ice group-hover:scale-105 transition-transform">
+                    {idx % 2 === 0 ? '⚡' : '🔥'}
+                  </div>
+                  <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
+                    {sub.nombre}
+                  </h3>
+                  <p className="text-xs text-ice/70 font-mono leading-relaxed line-clamp-2">
+                    {sub.descripcion || 'Paquetes de entrega inmediata por ID oficial.'}
+                  </p>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+
+                <div className="pt-4 mt-6 border-t border-neon/15 flex items-center justify-between text-xs font-mono">
+                  <span className="text-ice/70">Nivel 2 de Catálogo</span>
+                  <span className="text-neon font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                    Ver Productos →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

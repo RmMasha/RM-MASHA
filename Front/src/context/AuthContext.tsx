@@ -13,6 +13,8 @@ interface AuthContextType {
   loading: boolean;
   refreshProfile: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, metadata: Record<string, any>) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -24,6 +26,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   refreshProfile: async () => {},
   markNotificationAsRead: async () => {},
+  signIn: async () => ({ error: null }),
+  signUp: async () => ({ error: null }),
   signOut: async () => {},
 });
 
@@ -39,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfileAndNotifications = useCallback(async (userId: string) => {
     try {
-      // 1. Obtener perfil de usuario
       const { data: prof, error: profError } = await supabase
         .from('users')
         .select('*')
@@ -50,7 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(prof as UserProfile);
       }
 
-      // 2. Obtener notificaciones recientes
       const { data: notifs } = await supabase
         .from('notifications')
         .select('*')
@@ -83,6 +85,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (data.user) {
+      setUser(data.user);
+      await fetchProfileAndNotifications(data.user.id);
+    }
+    return { error };
+  };
+
+  const signUp = async (email: string, password: string, metadata: Record<string, any>) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata,
+      },
+    });
+    if (data.user) {
+      setUser(data.user);
+      await fetchProfileAndNotifications(data.user.id);
+    }
+    return { error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -91,7 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // 1. Cargar sesión inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -102,7 +127,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // 2. Escuchar cambios de autenticación
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -120,11 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supabase, fetchProfileAndNotifications]);
 
-  // 3. Suscripción en Tiempo Real (Realtime) para Saldo y Notificaciones
   useEffect(() => {
     if (!user?.id) return;
 
-    // Canal de cambios en perfil (Saldo actual)
     const profileChannel = supabase
       .channel(`profile:${user.id}`)
       .on(
@@ -141,7 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
-    // Canal de nuevas notificaciones
     const notifChannel = supabase
       .channel(`notifications:${user.id}`)
       .on(
@@ -176,6 +197,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         refreshProfile,
         markNotificationAsRead,
+        signIn,
+        signUp,
         signOut,
       }}
     >

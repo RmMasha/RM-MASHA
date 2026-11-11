@@ -6,3 +6,6 @@ export function createClient() {
 
   return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
+
+// Cliente singleton para componentes del navegador
+export const supabase = createClient();

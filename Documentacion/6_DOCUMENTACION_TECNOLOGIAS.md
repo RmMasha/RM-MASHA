@@ -57,3 +57,4 @@ Plataforma cloud optimizada para Next.js con integración directa a repositorios
 1. **Integración y Despliegue Continuo (CI/CD):** Cada actualización enviada a la rama principal de GitHub se compila y publica automáticamente.
 2. **Red de Distribución Global (Edge CDN):** Tiempos de respuesta mínimos para usuarios en toda Latinoamérica y el mundo.
 3. **Disponibilidad 99.99%:** Tolerancia a picos de tráfico durante promociones y eventos especiales de Free Fire.
+

@@ -9,29 +9,57 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#0B0E14',
-        surface: {
-          DEFAULT: '#111622',
-          card: '#161D2D',
-          hover: '#1F293D',
-          border: '#27334D',
+        // Colores Principales (La Atmósfera)
+        navy: {
+          deepest: '#050811', // Fondo base más profundo
+          DEFAULT: '#070B19', // Azul marino nocturno
+          card: '#0A1128',    // Fondo de contenedores
+          surface: '#0E1738', // Capa intermedia
         },
-        brand: {
-          primary: '#FF4655', // Fuego / Free Fire Red
-          hover: '#E02F3E',
-          accent: '#FF7B00',
-          gold: '#FFB703',
-          cyan: '#00F5D4',
+        neon: {
+          blue: '#00D2FF',    // Azul eléctrico/neón principal
+          cyan: '#00F0FF',    // Resplandor máximo
+          glow: '#38BDF8',    // Iluminación suave
+        },
+        // Colores Secundarios (El Contraste)
+        pure: {
+          white: '#FFFFFF',
+        },
+        magenta: {
+          DEFAULT: '#FF007F', // Fucsia/Magenta distintivo de personajes
+          hover: '#E00070',
+          light: '#FF3399',
+          rose: '#F43F5E',
+        },
+        // Colores de Acento y Relleno (Los Detalles)
+        ice: {
+          DEFAULT: '#7DD3FC', // Azul Hielo / Celeste
+          light: '#BAE6FD',
+          frost: '#E0F2FE',
+          crystal: '#A5F3FC', // Nieve y papel de regalo navideño
+        },
+        pitch: {
+          black: '#030712',   // Negro táctico profundo
+          panel: '#060913',   // Paneles opacos de alto contraste
+          card: '#090D1A',
+        },
+        gold: {
+          DEFAULT: '#FBBF24', // Dorado táctico exclusivo
+          amber: '#F59E0B',
+          bright: '#FFD700',
         },
       },
       backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'hero-pattern': "radial-gradient(circle at 50% 0%, rgba(255, 70, 85, 0.15) 0%, rgba(11, 14, 20, 1) 75%)",
+        'cyber-grid': "linear-gradient(to right, rgba(0, 210, 255, 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 210, 255, 0.07) 1px, transparent 1px)",
+        'festive-hero': "radial-gradient(ellipse at 50% -20%, rgba(0, 210, 255, 0.25) 0%, rgba(7, 11, 25, 0.95) 60%, #050811 100%)",
+        'ice-gradient': "linear-gradient(135deg, #00D2FF 0%, #7DD3FC 50%, #FF007F 100%)",
       },
       boxShadow: {
-        'glow-red': '0 0 25px -5px rgba(255, 70, 85, 0.4)',
-        'glow-gold': '0 0 25px -5px rgba(255, 183, 3, 0.4)',
-        'glow-cyan': '0 0 25px -5px rgba(0, 245, 212, 0.4)',
+        'neon-pill': '0 0 25px -3px rgba(0, 210, 255, 0.65), 0 0 10px rgba(0, 210, 255, 0.4)',
+        'neon-magenta': '0 0 25px -3px rgba(255, 0, 127, 0.6), 0 0 10px rgba(255, 0, 127, 0.35)',
+        'neon-border': '0 0 15px rgba(0, 210, 255, 0.25)',
+        'ice-glow': '0 0 20px rgba(125, 211, 252, 0.35)',
+        'gold-glow': '0 0 20px rgba(251, 191, 36, 0.4)',
       },
     },
   },

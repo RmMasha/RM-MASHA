@@ -1,400 +1,283 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Order, OrderStatus } from '@/types/database.types';
-import { formatCurrency, formatDate, getOrderStatusBadge } from '@/lib/utils';
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  PackageCheck,
-  AlertTriangle,
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { formatDate, getOrderStatusBadge } from '@/lib/utils';
 
 export default function AdminPedidosPage() {
-  const supabase = createClient();
-
-  const [activeTab, setActiveTab] = useState<OrderStatus>('nuevo');
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'nuevo' | 'confirmado' | 'entregado' | 'rechazado'>('nuevo');
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const pageSize = 10;
 
-  const [loading, setLoading] = useState(true);
+  // Modal para ver comprobante
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Modal para ver comprobante
-  const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
-
-  // Modal para rechazar pedido
-  const [rejectingOrderId, setRejectingOrderId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-
-  const loadOrders = useCallback(async () => {
+  // Cargar pedidos según pestaña y página
+  const fetchOrders = async () => {
     try {
       setLoading(true);
+
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
       const { data, count, error } = await supabase
         .from('orders')
-        .select('*, users(nombre, email, whatsapp), variants(*, products(*))', {
-          count: 'exact',
-        })
+        .select('*, users(id, nombre, email, whatsapp, rol), variants(nombre, products(nombre))', { count: 'exact' })
         .eq('estado', activeTab)
-        .order('created_at', { ascending: false })
+        .order('fecha_creacion', { ascending: false })
         .range(from, to);
 
-      if (data && !error) {
-        setOrders(data as Order[]);
-        setTotalCount(count || 0);
-      }
+      if (error) throw error;
+
+      setOrders(data || []);
+      setTotalCount(count || 0);
     } catch (err) {
-      console.error('Error al cargar pedidos en admin:', err);
+      console.error('Error fetching admin orders:', err);
     } finally {
       setLoading(false);
     }
-  }, [supabase, activeTab, page]);
+  };
 
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+    fetchOrders();
+  }, [activeTab, page]);
 
-  // Cambiar estado a 'confirmado' (aprobación de pago directo)
-  const handleConfirmOrder = async (orderId: string, usuarioId: string, codigoPedido: string) => {
-    setActionLoading(orderId);
+  // Cambiar de estado un pedido y disparar notificación
+  const handleUpdateStatus = async (pedidoId: string, nuevoEstado: 'confirmado' | 'entregado' | 'rechazado', usuarioId: string, motivo?: string) => {
     try {
-      const { error } = await supabase
+      setActionLoading(pedidoId);
+
+      // 1. Actualizar estado del pedido
+      const { error: updateError } = await supabase
         .from('orders')
-        .update({
-          estado: 'confirmado',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orderId);
+        .update({ estado: nuevoEstado })
+        .eq('id', pedidoId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Disparar notificación push al usuario
-      await supabase.from('notifications').insert({
-        usuario_id: usuarioId,
-        mensaje: `¡Tu comprobante para el pedido ${codigoPedido} fue validado con éxito! Tu servicio está en cola de entrega.`,
-        tipo: 'pedido',
-        enlace: '/ordenes',
-      });
-
-      loadOrders();
-    } catch (err: any) {
-      alert('Error al confirmar pedido: ' + err.message);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // Cambiar estado a 'entregado' ("Servicio Entregado")
-  const handleMarkDelivered = async (orderId: string, usuarioId: string, codigoPedido: string) => {
-    setActionLoading(orderId);
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          estado: 'entregado',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orderId);
-
-      if (error) throw error;
-
-      // Disparar notificación push al cliente
-      await supabase.from('notifications').insert({
-        usuario_id: usuarioId,
-        mensaje: `🎉 ¡Tus diamantes del pedido ${codigoPedido} han sido entregados con éxito en tu cuenta de juego! Gracias por tu preferencia.`,
-        tipo: 'pedido',
-        enlace: '/ordenes',
-      });
-
-      loadOrders();
-    } catch (err: any) {
-      alert('Error al marcar pedido como entregado: ' + err.message);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // Rechazar pedido
-  const handleRejectOrder = async () => {
-    if (!rejectingOrderId) return;
-    setActionLoading(rejectingOrderId);
-
-    try {
-      const targetOrder = orders.find((o) => o.id === rejectingOrderId);
-
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          estado: 'rechazado',
-          motivo_rechazo: rejectReason.trim() || 'Comprobante no válido o datos incorrectos.',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', rejectingOrderId);
-
-      if (error) throw error;
-
-      if (targetOrder?.usuario_id) {
-        await supabase.from('notifications').insert({
-          usuario_id: targetOrder.usuario_id,
-          mensaje: `Tu pedido ${targetOrder.codigo_pedido} fue rechazado. Motivo: ${
-            rejectReason.trim() || 'Comprobante no válido'
-          }`,
-          tipo: 'rechazo',
-          enlace: '/ordenes',
-        });
+      // 2. Disparar notificación push al cliente
+      let mensaje = '';
+      if (nuevoEstado === 'confirmado') {
+        mensaje = `Tu pedido #${pedidoId.slice(0, 8)} ha sido confirmado y está en cola de acreditación.`;
+      } else if (nuevoEstado === 'entregado') {
+        mensaje = `¡Tus diamantes o servicio del pedido #${pedidoId.slice(0, 8)} han sido entregados con éxito! Revisa tu cuenta de Free Fire.`;
+      } else if (nuevoEstado === 'rechazado') {
+        mensaje = `Tu pedido #${pedidoId.slice(0, 8)} fue rechazado. Motivo: ${motivo || 'Comprobante no válido'}.`;
       }
 
-      setRejectingOrderId(null);
-      setRejectReason('');
-      loadOrders();
+      await supabase.from('notifications').insert({
+        usuario_id: usuarioId,
+        mensaje,
+        tipo: nuevoEstado === 'rechazado' ? 'rechazo' : 'pedido',
+        leido: false,
+      });
+
+      await fetchOrders();
     } catch (err: any) {
-      alert('Error al rechazar pedido: ' + err.message);
+      console.error('Error actualizando pedido:', err);
+      alert('Error: ' + err.message);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  // Obtener URL firmada temporal para comprobante privado
+  const handleViewReceipt = async (comprobantePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('comprobantes')
+        .createSignedUrl(comprobantePath, 300); // 5 minutos de validez
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        setPreviewImageUrl(data.signedUrl);
+      }
+    } catch (err: any) {
+      alert('No se pudo cargar el comprobante: ' + err.message);
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="space-y-6">
-      {/* HEADER DE SECCIÓN */}
-      <div>
-        <h2 className="text-xl font-black text-white">Gestor de Pedidos de Clientes</h2>
-        <p className="text-xs text-slate-400">
-          Supervisa los pedidos por pago directo, confirma entregas y revisa el historial con paginación de 10 en 10.
-        </p>
-      </div>
-
-      {/* TABS DE ESTADOS */}
-      <div className="flex border-b border-surface-border gap-4 overflow-x-auto">
-        <button
-          onClick={() => {
-            setActiveTab('nuevo');
-            setPage(1);
-          }}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'nuevo'
-              ? 'text-yellow-400 border-b-2 border-yellow-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          Nuevos (Pago Directo)
-        </button>
+      {/* Cabecera del Gestor */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/15 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-2">
+            <span>❄</span> Módulo 6.6: Gestor de Pedidos (Paginación 10 en 10)
+          </div>
+          <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+            Control de Pedidos
+          </h1>
+          <p className="text-xs text-ice/70 font-mono mt-1">
+            Revisión de pagos directos, aprobación y confirmación de entrega de diamantes.
+          </p>
+        </div>
 
         <button
-          onClick={() => {
-            setActiveTab('confirmado');
-            setPage(1);
-          }}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'confirmado'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
+          onClick={() => fetchOrders()}
+          className="btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
         >
-          <PackageCheck className="w-4 h-4" />
-          Confirmados (Por Entregar)
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('entregado');
-            setPage(1);
-          }}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'entregado'
-              ? 'text-emerald-400 border-b-2 border-emerald-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <CheckCircle className="w-4 h-4" />
-          Entregados (Auditoría)
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('rechazado');
-            setPage(1);
-          }}
-          className={`pb-3 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'rechazado'
-              ? 'text-rose-400 border-b-2 border-rose-400'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <XCircle className="w-4 h-4" />
-          Rechazados
+          <span>↻</span> Actualizar Lista
         </button>
       </div>
 
-      {/* TABLA DE PEDIDOS */}
-      <div className="bg-surface-card border border-surface-border rounded-3xl overflow-hidden shadow-xl">
+      {/* Pestañas de Estado de Pedidos */}
+      <div className="flex gap-2 border-b border-neon/20 pb-2 overflow-x-auto">
+        {(['nuevo', 'confirmado', 'entregado', 'rechazado'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => {
+              setActiveTab(tab);
+              setPage(1);
+            }}
+            className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
+              activeTab === tab
+                ? 'btn-neon-pill font-bold shadow-neon'
+                : 'text-ice/70 hover:text-white hover:bg-navy/60'
+            }`}
+          >
+            {tab === 'nuevo'
+              ? 'Nuevos (Pago Directo)'
+              : tab === 'confirmado'
+              ? 'Confirmados (En Proceso)'
+              : tab === 'entregado'
+              ? 'Entregados (Historial)'
+              : 'Rechazados'}
+          </button>
+        ))}
+      </div>
+
+      {/* Tabla de Pedidos */}
+      <div className="cyber-panel rounded-2xl overflow-hidden border-neon/30">
         {loading ? (
-          <div className="p-16 text-center text-slate-400 text-sm">
-            Cargando pedidos...
+          <div className="p-12 text-center text-xs font-mono text-ice">
+            Cargando pedidos de la base de datos...
           </div>
         ) : orders.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-sm">
-            No se encontraron pedidos en esta categoría.
+          <div className="p-12 text-center text-xs font-mono text-ice/60">
+            No hay pedidos en la pestaña "{activeTab}".
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface/80 text-slate-400 uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Código</th>
-                  <th className="px-5 py-3 font-semibold">Cliente</th>
-                  <th className="px-5 py-3 font-semibold">Producto / Variante</th>
-                  <th className="px-5 py-3 font-semibold">Datos Requeridos (ID)</th>
-                  <th className="px-5 py-3 font-semibold">Método / Ref</th>
-                  <th className="px-5 py-3 font-semibold">Total</th>
-                  <th className="px-5 py-3 font-semibold text-right">Acciones</th>
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-neon/20 text-ice/70 bg-pitch/80">
+                  <th className="py-3.5 px-4">ID Pedido</th>
+                  <th className="py-3.5 px-4">Cliente</th>
+                  <th className="py-3.5 px-4">Producto & Variante</th>
+                  <th className="py-3.5 px-4">Datos Requeridos (UID)</th>
+                  <th className="py-3.5 px-4">Método / Comprobante</th>
+                  <th className="py-3.5 px-4">Fecha</th>
+                  <th className="py-3.5 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
-                {orders.map((ord) => {
-                  const productName = ord.variants?.products?.nombre || 'Producto';
-                  const variantName = ord.variants?.nombre || 'Variante';
-                  const isActioning = actionLoading === ord.id;
-
+              <tbody className="divide-y divide-neon/10">
+                {orders.map((o) => {
+                  const reqJson = o.datos_requeridos_json || {};
+                  const orderId = o.id || o.pedido_id;
+                  const orderCode = o.codigo_pedido || ('#' + orderId.slice(0, 8));
+                  const orderFecha = o.created_at || o.fecha_creacion;
                   return (
-                    <tr key={ord.id} className="hover:bg-surface-hover/30 transition-colors">
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="font-mono font-bold text-white text-xs block">
-                          {ord.codigo_pedido}
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                          {formatDate(ord.created_at)}
-                        </span>
+                    <tr key={orderId} className="hover:bg-navy/40 transition-colors">
+                      <td className="py-3.5 px-4 text-neon font-bold">
+                        {orderCode}
                       </td>
-
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="font-bold text-white block">
-                          {ord.users?.nombre || 'Usuario'}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block">
-                          {ord.users?.whatsapp || ord.users?.email}
-                        </span>
+                      <td className="py-3.5 px-4">
+                        <div className="text-pure font-bold">{o.users?.nombre || 'Usuario'}</div>
+                        <div className="text-[11px] text-ice/60">{o.users?.email}</div>
+                        <div className="text-[10px] text-ice/50">WhatsApp: {o.users?.whatsapp || 'N/A'}</div>
                       </td>
-
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="font-semibold text-slate-200 block">
-                          {productName}
-                        </span>
-                        <span className="text-[10px] text-brand-gold">
-                          {variantName}
-                        </span>
+                      <td className="py-3.5 px-4">
+                        <div className="text-pure font-bold">{o.variants?.products?.nombre}</div>
+                        <div className="text-[11px] text-gold">{o.variants?.nombre}</div>
                       </td>
-
-                      <td className="px-5 py-4">
-                        <div className="space-y-0.5">
-                          {Object.entries(ord.datos_requeridos_json || {}).map(([k, v]) => (
-                            <div key={k} className="text-[11px]">
-                              <span className="text-slate-400 capitalize">{k}: </span>
-                              <span className="font-mono text-brand-cyan font-bold select-all">
-                                {v}
-                              </span>
+                      <td className="py-3.5 px-4 text-ice/90">
+                        {Object.entries(reqJson)
+                          .filter(([k]) => k !== 'referencia')
+                          .map(([k, v]) => (
+                            <div key={k}>
+                              <span className="text-ice/50">{k}:</span> {String(v)}
                             </div>
                           ))}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="font-medium text-slate-300 block">
-                          {ord.metodo_pago}
-                        </span>
-                        {ord.referencia_pago && (
-                          <span className="font-mono text-[10px] text-slate-400 select-all">
-                            Ref: {ord.referencia_pago}
-                          </span>
-                        )}
-                        {ord.comprobante_url && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const { data } = await supabase.storage
-                                .from('comprobantes')
-                                .createSignedUrl(ord.comprobante_url!, 300);
-                              if (data?.signedUrl) {
-                                setViewReceiptUrl(data.signedUrl);
-                              }
-                            }}
-                            className="text-[10px] text-brand-primary underline flex items-center gap-1 mt-0.5 hover:text-white"
-                          >
-                            <Eye className="w-3 h-3" />
-                            Ver Captura
-                          </button>
-                        )}
-                      </td>
-
-                      <td className="px-5 py-4 font-black text-brand-gold whitespace-nowrap text-sm">
-                        {formatCurrency(ord.total)}
-                      </td>
-
-                      <td className="px-5 py-4 text-right whitespace-nowrap">
-                        {ord.estado === 'nuevo' && (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              disabled={isActioning}
-                              onClick={() =>
-                                handleConfirmOrder(ord.id, ord.usuario_id, ord.codigo_pedido)
-                              }
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 font-bold text-xs flex items-center gap-1"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              Confirmar
-                            </button>
-                            <button
-                              disabled={isActioning}
-                              onClick={() => {
-                                setRejectingOrderId(ord.id);
-                                setRejectReason('');
-                              }}
-                              className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 font-bold text-xs flex items-center gap-1"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              Rechazar
-                            </button>
+                        {reqJson.referencia && (
+                          <div className="text-[10px] text-neon mt-1">
+                            Ref: {reqJson.referencia}
                           </div>
                         )}
-
-                        {ord.estado === 'confirmado' && (
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="text-pure">{o.metodo_pago}</div>
+                        {o.comprobante_url ? (
                           <button
-                            disabled={isActioning}
-                            onClick={() =>
-                              handleMarkDelivered(ord.id, ord.usuario_id, ord.codigo_pedido)
-                            }
-                            className="px-3 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-hover text-white font-bold text-xs flex items-center gap-1.5 shadow-glow-red ml-auto"
+                            type="button"
+                            onClick={() => handleViewReceipt(o.comprobante_url)}
+                            className="mt-1 text-[11px] text-neon hover:text-white underline cursor-pointer"
                           >
-                            <PackageCheck className="w-3.5 h-3.5" />
-                            Servicio Entregado
+                            Ver Comprobante 🔍
                           </button>
-                        )}
-
-                        {ord.estado === 'entregado' && (
-                          <span className="text-[11px] text-emerald-400 font-semibold">
-                            ✓ Entregado
+                        ) : (
+                          <span className="text-[10px] text-gold font-bold">
+                            ⚡ Pagado con Saldo
                           </span>
                         )}
+                      </td>
+                      <td className="py-3.5 px-4 text-ice/70">
+                        {formatDate(orderFecha)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex gap-2 justify-end">
+                          {activeTab === 'nuevo' && (
+                            <>
+                              <button
+                                disabled={actionLoading === orderId}
+                                onClick={() => handleUpdateStatus(orderId, 'confirmado', o.usuario_id)}
+                                className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase bg-neon/20 border border-neon text-neon hover:bg-neon hover:text-white transition-all disabled:opacity-50"
+                              >
+                                Confirmar
+                              </button>
+                              <button
+                                disabled={actionLoading === orderId}
+                                onClick={() => {
+                                  const motivo = prompt('Ingresa el motivo del rechazo para notificar al cliente:');
+                                  if (motivo) {
+                                    handleUpdateStatus(orderId, 'rechazado', o.usuario_id, motivo);
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase bg-magenta/20 border border-magenta text-magenta hover:bg-magenta hover:text-white transition-all disabled:opacity-50"
+                              >
+                                Rechazar
+                              </button>
+                            </>
+                          )}
 
-                        {ord.estado === 'rechazado' && (
-                          <span className="text-[11px] text-rose-400 font-semibold" title={ord.motivo_rechazo || ''}>
-                            Rechazado
-                          </span>
-                        )}
+                          {activeTab === 'confirmado' && (
+                            <button
+                              disabled={actionLoading === orderId}
+                              onClick={() => handleUpdateStatus(orderId, 'entregado', o.usuario_id)}
+                              className="btn-neon-pill px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider disabled:opacity-50"
+                            >
+                              ✓ Servicio Entregado
+                            </button>
+                          )}
+
+                          {activeTab === 'entregado' && (
+                            <span className="text-neon text-[11px] font-bold">
+                              ✓ Completado
+                            </span>
+                          )}
+
+                          {activeTab === 'rechazado' && (
+                            <span className="text-magenta text-[11px] font-bold">
+                              ✕ Rechazado
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -404,95 +287,60 @@ export default function AdminPedidosPage() {
           </div>
         )}
 
-        {/* PAGINACIÓN OBLIGATORIA DE 10 EN 10 */}
-        <div className="p-4 border-t border-surface-border flex items-center justify-between text-xs text-slate-400 bg-surface/40">
-          <span>
-            Mostrando {orders.length} de {totalCount} pedidos (Página {page} de {totalPages})
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 rounded-lg bg-surface border border-surface-border disabled:opacity-30 hover:bg-surface-hover text-white"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2 font-bold text-white">{page}</span>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="p-1.5 rounded-lg bg-surface border border-surface-border disabled:opacity-30 hover:bg-surface-hover text-white"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+        {/* Paginación 10 en 10 */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-neon/20 flex items-center justify-between text-xs font-mono">
+            <span className="text-ice/70">
+              Página {page} de {totalPages} ({totalCount} pedidos en total)
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+                className="px-3 py-1.5 rounded-lg bg-navy/80 border border-neon/30 text-pure hover:border-neon disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+                className="px-3 py-1.5 rounded-lg bg-navy/80 border border-neon/30 text-pure hover:border-neon disabled:opacity-40"
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* MODAL: VER COMPROBANTE DE PAGO */}
-      {viewReceiptUrl && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-xl w-full bg-surface-card border border-surface-border rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-white text-base">Comprobante de Pago</h3>
+      {/* Modal para Visualizar Comprobante de Pago */}
+      {previewImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="cyber-panel p-6 rounded-2xl max-w-2xl w-full border-neon shadow-neon">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-bold uppercase tracking-wider text-pure">
+                Comprobante de Pago
+              </h3>
               <button
-                onClick={() => setViewReceiptUrl(null)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => setPreviewImageUrl(null)}
+                className="text-pure hover:text-magenta font-bold text-xl"
               >
                 ✕
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-auto rounded-2xl bg-black flex items-center justify-center p-2">
+            <div className="max-h-[70vh] overflow-auto rounded-xl bg-pitch p-2 flex items-center justify-center">
               <img
-                src={viewReceiptUrl}
+                src={previewImageUrl}
                 alt="Comprobante"
-                className="max-w-full max-h-[60vh] object-contain rounded-xl"
+                className="max-w-full max-h-[65vh] object-contain rounded-lg"
               />
             </div>
-            <button
-              onClick={() => setViewReceiptUrl(null)}
-              className="w-full py-2.5 rounded-xl bg-surface-hover hover:bg-surface-border text-white text-xs font-bold transition-colors"
-            >
-              Cerrar Visor
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: MOTIVO DE RECHAZO */}
-      {rejectingOrderId && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-surface-card border border-rose-500/30 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center gap-2 text-rose-500">
-              <AlertTriangle className="w-5 h-5" />
-              <h3 className="font-bold text-white text-base">Rechazar Pedido</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Ingresa el motivo del rechazo. Este mensaje será notificado inmediatamente al cliente.
-            </p>
-            <textarea
-              rows={3}
-              required
-              placeholder="Ej: La referencia de pago no coincide con nuestros registros bancarios."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full p-3 rounded-xl bg-surface border border-surface-border text-white text-xs focus:outline-none focus:border-brand-primary"
-            />
-            <div className="flex gap-2 justify-end">
+            <div className="mt-4 flex justify-end">
               <button
-                type="button"
-                onClick={() => setRejectingOrderId(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+                onClick={() => setPreviewImageUrl(null)}
+                className="btn-ice-pill px-5 py-2 text-xs font-bold uppercase tracking-wider"
               >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleRejectOrder}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition-colors"
-              >
-                Confirmar Rechazo
+                Cerrar Visor
               </button>
             </div>
           </div>
@@ -501,3 +349,4 @@ export default function AdminPedidosPage() {
     </div>
   );
 }
+

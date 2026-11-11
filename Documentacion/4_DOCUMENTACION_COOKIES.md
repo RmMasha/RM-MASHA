@@ -28,3 +28,4 @@ Todas las cookies de autenticación generadas por el sistema se configuran con l
 - `HttpOnly`: Previene que scripts maliciosos de JavaScript cliente puedan acceder al token (mitigación de XSS).
 - `Secure`: Solo se transmiten a través de conexiones cifradas HTTPS (excepto entorno localhost de desarrollo).
 - `SameSite=Lax`: Protege contra ataques de falsificación de peticiones en sitios cruzados (CSRF).
+

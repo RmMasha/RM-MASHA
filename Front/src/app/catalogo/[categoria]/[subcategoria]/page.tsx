@@ -1,139 +1,150 @@
-import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Category, Subcategory, Product } from '@/types/database.types';
-import { ChevronRight, ArrowRight, Package, Home } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps {
+interface Props {
   params: {
     categoria: string;
     subcategoria: string;
   };
 }
 
-async function getProductsData(catSlug: string, subcatSlug: string): Promise<{
-  category: Category | null;
-  subcategory: Subcategory | null;
-  products: Product[];
-}> {
-  try {
-    const supabase = createClient();
+export default async function SubcategoriaProductosPage({ params }: Props) {
+  const supabase = createClient();
+  const { categoria: catSlug, subcategoria: subSlug } = params;
 
-    const { data: category } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('slug', catSlug)
-      .eq('activo', true)
-      .single();
+  // 1. Obtener la categoría
+  const { data: categoria } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('slug', catSlug)
+    .single();
 
-    if (!category) return { category: null, subcategory: null, products: [] };
-
-    const { data: subcategory } = await supabase
-      .from('subcategories')
-      .select('*')
-      .eq('categoria_id', category.id)
-      .eq('slug', subcatSlug)
-      .eq('activo', true)
-      .single();
-
-    if (!subcategory) return { category: category as Category, subcategory: null, products: [] };
-
-    const { data: products } = await supabase
-      .from('products')
-      .select('*')
-      .eq('subcategoria_id', subcategory.id)
-      .eq('activo', true)
-      .order('orden', { ascending: true });
-
-    return {
-      category: category as Category,
-      subcategory: subcategory as Subcategory,
-      products: (products as Product[]) || [],
-    };
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    return { category: null, subcategory: null, products: [] };
-  }
-}
-
-export default async function SubcategoriaPage({ params }: PageProps) {
-  const { category, subcategory, products } = await getProductsData(
-    params.categoria,
-    params.subcategoria
-  );
-
-  if (!category || !subcategory) {
+  if (!categoria) {
     notFound();
   }
 
+  // 2. Obtener la subcategoría
+  const catId = (categoria as Category).id || (categoria as Category).categoria_id;
+  const { data: subcategoria } = await supabase
+    .from('subcategories')
+    .select('*')
+    .eq('categoria_id', catId)
+    .eq('slug', subSlug)
+    .single();
+
+  if (!subcategoria) {
+    notFound();
+  }
+
+  // 3. Obtener los productos activos de esta subcategoría
+  const subId = (subcategoria as Subcategory).id || (subcategoria as Subcategory).subcategoria_id;
+  const { data: productos } = await supabase
+    .from('products')
+    .select('*, variants(*, prices(*))')
+    .eq('subcategoria_id', subId)
+    .eq('activo', true)
+    .order('orden', { ascending: true });
+
+  const productList: (Product & { variants?: any[] })[] = productos || [];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* BREADCRUMB */}
-      <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 mb-8 flex-wrap">
-        <Link href="/" className="hover:text-white flex items-center gap-1">
-          <Home className="w-3.5 h-3.5" />
-          Inicio
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <Link href="/catalogo" className="hover:text-white">
-          Catálogo
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <Link href={`/catalogo/${category.slug}`} className="hover:text-white">
-          {category.nombre}
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <span className="text-brand-primary font-bold">{subcategory.nombre}</span>
+    <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
+      {/* Miga de Pan (Breadcrumb) */}
+      <nav className="flex items-center gap-2 text-xs font-mono text-ice/60 mb-6 flex-wrap">
+        <Link href="/" className="hover:text-neon transition-colors">Inicio</Link>
+        <span>/</span>
+        <Link href="/catalogo" className="hover:text-neon transition-colors">Catálogo</Link>
+        <span>/</span>
+        <Link href={`/catalogo/${catSlug}`} className="hover:text-neon transition-colors">{(categoria as Category).nombre}</Link>
+        <span>/</span>
+        <span className="text-pure font-bold">{(subcategoria as Subcategory).nombre}</span>
       </nav>
 
-      {/* HEADER */}
-      <div className="mb-10 space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          {subcategory.nombre}
-        </h1>
-        <p className="text-sm sm:text-base text-slate-400 max-w-2xl">
-          {subcategory.descripcion || 'Selecciona el producto o paquete para ver opciones y precios dinámicos.'}
-        </p>
+      {/* Cabecera de Subcategoría */}
+      <div className="cyber-panel rounded-3xl p-6 md:p-10 mb-10 border-neon/30 relative overflow-hidden">
+        <div className="max-w-2xl relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-magenta/10 border border-magenta/30 text-magenta text-[11px] font-mono uppercase mb-3">
+            <span>❄</span> Nivel 3: Productos Disponibles
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black text-pure uppercase tracking-wider">
+            {(subcategoria as Subcategory).nombre}
+          </h1>
+          <p className="text-xs md:text-sm text-ice/80 font-mono mt-2 leading-relaxed">
+            {(subcategoria as Subcategory).descripcion || 'Selecciona el paquete deseado para configurar tu ID y método de pago.'}
+          </p>
+        </div>
       </div>
 
-      {/* PRODUCTS GRID */}
-      {products.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-surface-card border border-surface-border text-center text-slate-400">
-          No hay productos disponibles en esta subcategoría.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((prod) => (
-            <Link
-              key={prod.id}
-              href={`/catalogo/${params.categoria}/${params.subcategoria}/${prod.slug}`}
-              className="group rounded-3xl bg-surface-card border border-surface-border p-6 hover:border-brand-primary/60 transition-all hover:scale-[1.02] shadow-xl flex flex-col justify-between glow-border"
-            >
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-surface-hover flex items-center justify-center text-brand-gold group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                  <Package className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-white group-hover:text-brand-primary transition-colors">
-                  {prod.nombre}
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  {prod.descripcion || 'Entrega directa y segura con múltiples opciones de pago.'}
-                </p>
-              </div>
+      {/* Grid de Productos */}
+      <div>
+        <h2 className="text-xl font-bold uppercase tracking-wider text-pure mb-6 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+          Lista de Productos ({productList.length})
+        </h2>
 
-              <div className="pt-6 mt-4 border-t border-surface-border flex items-center justify-between text-xs font-bold text-slate-300 group-hover:text-white">
-                <span>Configurar y Comprar</span>
-                <div className="w-7 h-7 rounded-full bg-surface-hover flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                  <ArrowRight className="w-3.5 h-3.5" />
+        {productList.length === 0 ? (
+          <div className="cyber-panel rounded-2xl p-10 text-center">
+            <p className="text-sm font-mono text-ice/70">
+              No hay productos registrados en esta subcategoría actualmente.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {productList.map((prod) => (
+              <div
+                key={prod.id || prod.producto_id}
+                className="cyber-panel rounded-2xl p-6 flex flex-col justify-between hover:border-neon transition-all duration-300"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-mono uppercase bg-neon/15 text-neon border border-neon/30">
+                      Entrega por ID
+                    </span>
+                    <span className="text-xs font-mono text-gold flex items-center gap-1">
+                      <span>★</span> Garantizado
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-pure mb-2">
+                    {prod.nombre}
+                  </h3>
+
+                  <p className="text-xs text-ice/70 font-mono leading-relaxed mb-6 line-clamp-3">
+                    {prod.descripcion || 'Recarga oficial sin riesgo de ban, acreditación rápida.'}
+                  </p>
+
+                  {/* Variantes mini-list */}
+                  {prod.variants && prod.variants.length > 0 && (
+                    <div className="text-[11px] font-mono text-ice/60 mb-4">
+                      {prod.variants.length} {prod.variants.length === 1 ? 'paquete disponible' : 'paquetes disponibles'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-neon/15 flex items-center justify-between">
+                  <span className="text-xs font-mono text-ice/70">
+                    Nivel 3
+                  </span>
+                  <Link
+                    href={`/catalogo/${catSlug}/${subSlug}/${prod.slug}`}
+                    className="btn-neon-pill px-5 py-2 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5"
+                  >
+                    Comprar Ahora
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

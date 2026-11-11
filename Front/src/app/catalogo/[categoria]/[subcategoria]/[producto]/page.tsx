@@ -1,22 +1,12 @@
-import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { ProductCheckoutClient } from '@/components/catalog/ProductCheckoutClient';
-import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import {
-  Category,
-  Subcategory,
-  Product,
-  Variant,
-  ProductRequirement,
-  PaymentMethod,
-} from '@/types/database.types';
-import { ChevronRight, Home, ShieldCheck } from 'lucide-react';
+import ProductCheckoutClient from '@/components/catalog/ProductCheckoutClient';
+import { Category, Subcategory, Product, Variant, Price, ProductRequirement, PaymentMethod, Review } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps {
+interface Props {
   params: {
     categoria: string;
     subcategoria: string;
@@ -24,174 +14,129 @@ interface PageProps {
   };
 }
 
-async function getProductData(
-  catSlug: string,
-  subcatSlug: string,
-  prodSlug: string
-): Promise<{
-  category: Category | null;
-  subcategory: Subcategory | null;
-  product: Product | null;
-  variants: Variant[];
-  requirements: ProductRequirement[];
-  paymentMethods: PaymentMethod[];
-}> {
-  try {
-    const supabase = createClient();
+export default async function DetalleProductoPage({ params }: Props) {
+  const supabase = createClient();
+  const { categoria: catSlug, subcategoria: subSlug, producto: prodSlug } = params;
 
-    const { data: category } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('slug', catSlug)
-      .eq('activo', true)
-      .single();
+  // 1. Obtener la categoría
+  const { data: categoria } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('slug', catSlug)
+    .single();
 
-    if (!category) {
-      return {
-        category: null,
-        subcategory: null,
-        product: null,
-        variants: [],
-        requirements: [],
-        paymentMethods: [],
-      };
-    }
+  if (!categoria) notFound();
 
-    const { data: subcategory } = await supabase
-      .from('subcategories')
-      .select('*')
-      .eq('categoria_id', category.id)
-      .eq('slug', subcatSlug)
-      .eq('activo', true)
-      .single();
+  // 2. Obtener la subcategoría
+  const catId = (categoria as Category).id || (categoria as Category).categoria_id;
+  const { data: subcategoria } = await supabase
+    .from('subcategories')
+    .select('*')
+    .eq('categoria_id', catId)
+    .eq('slug', subSlug)
+    .single();
 
-    if (!subcategory) {
-      return {
-        category: category as Category,
-        subcategory: null,
-        product: null,
-        variants: [],
-        requirements: [],
-        paymentMethods: [],
-      };
-    }
+  if (!subcategoria) notFound();
 
-    const { data: product } = await supabase
-      .from('products')
-      .select('*')
-      .eq('subcategoria_id', subcategory.id)
-      .eq('slug', prodSlug)
-      .eq('activo', true)
-      .single();
+  // 3. Obtener el producto
+  const subId = (subcategoria as Subcategory).id || (subcategoria as Subcategory).subcategoria_id;
+  const { data: producto } = await supabase
+    .from('products')
+    .select('*')
+    .eq('subcategoria_id', subId)
+    .eq('slug', prodSlug)
+    .single();
 
-    if (!product) {
-      return {
-        category: category as Category,
-        subcategory: subcategory as Subcategory,
-        product: null,
-        variants: [],
-        requirements: [],
-        paymentMethods: [],
-      };
-    }
+  if (!producto) notFound();
 
-    // Cargar variantes con sus precios
-    const { data: variants } = await supabase
-      .from('variants')
-      .select('*, prices(*)')
-      .eq('producto_id', product.id)
-      .eq('activo', true)
-      .order('orden', { ascending: true });
+  const prodObj = producto as Product;
+  const prodId = prodObj.id || prodObj.producto_id;
 
-    // Cargar requisitos del producto
-    const { data: requirements } = await supabase
-      .from('product_requirements')
-      .select('*')
-      .eq('producto_id', product.id)
-      .order('orden', { ascending: true });
+  // 4. Obtener las variantes del producto con sus precios
+  const { data: variantsData } = await supabase
+    .from('variants')
+    .select('*, prices(*)')
+    .eq('producto_id', prodId)
+    .order('orden', { ascending: true });
 
-    // Cargar métodos de pago activos
-    const { data: paymentMethods } = await supabase
-      .from('payment_methods')
-      .select('*')
-      .eq('activo', true);
+  const variants = (variantsData || []) as (Variant & { prices: Price[] })[];
 
-    return {
-      category: category as Category,
-      subcategory: subcategory as Subcategory,
-      product: product as Product,
-      variants: (variants as Variant[]) || [],
-      requirements: (requirements as ProductRequirement[]) || [],
-      paymentMethods: (paymentMethods as PaymentMethod[]) || [],
-    };
-  } catch (error) {
-    console.error('Error fetching product data:', error);
-    return {
-      category: null,
-      subcategory: null,
-      product: null,
-      variants: [],
-      requirements: [],
-      paymentMethods: [],
-    };
-  }
-}
+  // 5. Obtener los requisitos del producto (ID de Jugador, etc.)
+  const { data: reqsData } = await supabase
+    .from('product_requirements')
+    .select('*')
+    .eq('producto_id', prodId)
+    .order('orden', { ascending: true });
 
-export default async function ProductoPage({ params }: PageProps) {
-  const { category, subcategory, product, variants, requirements, paymentMethods } =
-    await getProductData(params.categoria, params.subcategoria, params.producto);
+  const requirements = (reqsData || []) as ProductRequirement[];
 
-  if (!category || !subcategory || !product) {
-    notFound();
-  }
+  // 6. Obtener métodos de pago activos
+  const { data: payMethodsData } = await supabase
+    .from('payment_methods')
+    .select('*')
+    .eq('activo', true);
+
+  const paymentMethods = (payMethodsData || []) as PaymentMethod[];
+
+  // 7. Obtener reseñas del producto
+  const { data: reviewsData } = await supabase
+    .from('reviews')
+    .select('*, users(nombre, nickname, avatar_url)')
+    .eq('entidad_tipo', 'producto')
+    .eq('entidad_id', prodId)
+    .order('created_at', { ascending: false });
+
+  const initialReviews = (reviewsData || []) as (Review & { users?: { nombre: string; nickname?: string | null; avatar_url?: string | null } })[];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* BREADCRUMBS */}
-      <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 mb-8 flex-wrap">
-        <Link href="/" className="hover:text-white flex items-center gap-1">
-          <Home className="w-3.5 h-3.5" />
-          Inicio
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <Link href="/catalogo" className="hover:text-white">
-          Catálogo
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <Link href={`/catalogo/${category.slug}`} className="hover:text-white">
-          {category.nombre}
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <Link
-          href={`/catalogo/${category.slug}/${subcategory.slug}`}
-          className="hover:text-white"
-        >
-          {subcategory.nombre}
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <span className="text-brand-primary font-bold">{product.nombre}</span>
+    <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
+      {/* Miga de Pan (Breadcrumb Completo de 4 Niveles) */}
+      <nav className="flex items-center gap-2 text-xs font-mono text-ice/60 mb-6 flex-wrap">
+        <Link href="/" className="hover:text-neon transition-colors">Inicio</Link>
+        <span>/</span>
+        <Link href="/catalogo" className="hover:text-neon transition-colors">Catálogo</Link>
+        <span>/</span>
+        <Link href={`/catalogo/${catSlug}`} className="hover:text-neon transition-colors">{(categoria as Category).nombre}</Link>
+        <span>/</span>
+        <Link href={`/catalogo/${catSlug}/${subSlug}`} className="hover:text-neon transition-colors">{(subcategoria as Subcategory).nombre}</Link>
+        <span>/</span>
+        <span className="text-pure font-bold">{prodObj.nombre}</span>
       </nav>
 
-      {/* TÍTULO Y DESCRIPCIÓN */}
-      <div className="mb-8 space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          {product.nombre}
-        </h1>
-        <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-          {product.descripcion ||
-            'Configura tus opciones, ingresa los datos de entrega y selecciona tu método de pago preferido.'}
-        </p>
+      {/* Cabecera del Producto */}
+      <div className="cyber-panel rounded-3xl p-6 md:p-8 mb-8 border-neon/30 relative overflow-hidden">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-[11px] font-mono uppercase mb-2">
+              <span>❄</span> Nivel 4: Configuración & Entrega Inmediata
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-pure uppercase tracking-wider">
+              {prodObj.nombre}
+            </h1>
+            <p className="text-xs md:text-sm text-ice/80 font-mono mt-1 max-w-2xl">
+              {prodObj.descripcion || 'Servicio de recarga directa a cuenta oficial por ID.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="px-3 py-1.5 rounded-full bg-neon/15 border border-neon/30 text-neon">
+              Soporte 24/7 Activo
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* CHECKOUT AISLADO CON ERROR BOUNDARY */}
-      <ErrorBoundary fallbackTitle="Error en la pasarela de recarga">
-        <ProductCheckoutClient
-          product={product}
-          variants={variants}
-          requirements={requirements}
-          paymentMethods={paymentMethods}
-        />
-      </ErrorBoundary>
+      {/* Componente Interactivo de Selección, Requisitos y Liquidación */}
+      <ProductCheckoutClient
+        product={prodObj}
+        variants={variants}
+        requirements={requirements}
+        paymentMethods={paymentMethods}
+        initialReviews={initialReviews}
+        categorySlug={catSlug}
+        subcategorySlug={subSlug}
+      />
     </div>
   );
 }
+
