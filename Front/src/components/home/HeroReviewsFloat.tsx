@@ -96,22 +96,32 @@ export function HeroReviewsFloat({
   useEffect(() => {
     fetchHeroReviews();
 
-    // Suscripción Realtime a la tabla reviews
+    // Identificador único por instancia para evitar colisiones si se montan múltiples componentes simultáneos
+    const channelName = `hero-reviews-${position}-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
-      .channel('hero-reviews-realtime')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reviews' },
         () => {
           fetchHeroReviews();
         }
-      )
-      .subscribe();
+      );
+
+    try {
+      channel.subscribe();
+    } catch (err) {
+      console.warn('Realtime subscription error:', err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+      } catch (err) {
+        // Silenciar error en desmontaje
+      }
     };
-  }, []);
+  }, [position]);
 
   // 2. ROTACIÓN INFINITA CADA 4 SEGUNDOS CON TRANSICIÓN SUAVE (FADE IN / FADE OUT)
   useEffect(() => {
