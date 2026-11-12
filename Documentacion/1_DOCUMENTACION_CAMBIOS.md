@@ -74,3 +74,33 @@ Este documento registra cronológicamente cada cambio, modificación, creación 
 - **Verificación de Compilación y Puesta en Marcha:**
   - Compilación exitosa de producción `next build` (20 de 20 rutas estáticas y dinámicas compiladas con 0 errores).
   - Servidor de desarrollo Next.js en ejecución en `http://localhost:3000` respondiendo con código HTTP 200 OK.
+
+
+## [2026-11-12] Implementación de HeroBackground y Limpieza de Cuadrícula Temática
+
+### 1. Creación de Componente `HeroBackground.tsx`
+- **Atmósfera de Invierno Cibernético**:
+  - Incorporación de fondo panorámico 16:9 cinemático generado (`/images/cyber-winter-hero.jpg`).
+  - Gradiente radial profundo muy oscuro (`bg-[radial-gradient(ellipse_at_50%_20%,_rgba(23,37,84,0.45)_0%,_rgba(15,23,42,0.78)_50%,_#020617_100%)]`).
+  - Sistema de 38 copos de nieve en CSS dinámico con renderizado en cliente (`useEffect`) para evitar diferencias de hidratación SSR.
+  - Relámpagos de luz azul eléctrico (`#00f0ff`) con animaciones diagonales y desenfoque (blur de 22px a 28px).
+  - Base inferior con 4 capas de dunas de nieve superpuestas en SVG vectorizado que se integran con el fondo base `#050811`.
+  - **Aislamiento Estricto**: Cero personajes, cero avatares, cero siluetas; actúa como wrapper limpio que recibe `{children}`.
+
+### 2. Eliminación de Líneas de Cuadrícula ("Cuaderno de Matemáticas")
+- Eliminación de `.bg-cyber-grid-pattern` en `Front/src/app/globals.css`.
+- Eliminación de cualquier patrón de rejilla en `HeroChristmas.tsx` y `HeroBackground.tsx`, priorizando iluminación orgánica y degradados oscuros.
+
+### 3. Modernización de `HeroChristmas.tsx`
+- Se reemplazó la caja ilustrada de personajes por una **UI interactiva de Recarga Rápida de Free Fire**:
+  - Input para ID de jugador de Free Fire con validación numérica inmediata.
+  - Selector en cuadrícula de paquetes de diamantes (100, 310, 520, 1060 diamantes, Pase Booyah, Membresía) con etiquetas de bonificación festiva (+10%).
+  - Indicador de acreditación automática (< 2 min) y soporte de pago con saldo de billetera o depósito directo.
+  - Botón píldora con brillo azul eléctrico y redirección fluida al checkout del catálogo.
+  - Burbujas flotantes de reseñas destacadas con contorno de hielo y magenta.
+
+### 4. Servidor y Conectividad
+- Next.js en ejecución en `0.0.0.0:3000`, accesible simultáneamente desde:
+  - **PC**: `http://localhost:3000`
+  - **Móvil (Wi-Fi/LAN)**: `http://192.168.0.6:3000`
+- Compilación de producción `next build` verificada exitosamente (20/20 rutas estáticas y dinámicas).

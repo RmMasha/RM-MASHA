@@ -1,5 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Zap,
   ShieldCheck,
@@ -9,14 +12,23 @@ import {
   Flame,
   Sparkles,
   Snowflake,
+  CheckCircle2,
+  Gamepad2,
+  CreditCard,
+  Wallet,
 } from 'lucide-react';
 import { Review } from '@/types/database.types';
+import HeroBackground from './HeroBackground';
 
 interface HeroProps {
   featuredReviews?: Review[];
 }
 
 export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
+  const router = useRouter();
+  const [playerId, setPlayerId] = useState('');
+  const [selectedPack, setSelectedPack] = useState(2); // Default to 520 diamantes
+
   const defaultReviews = [
     {
       id: '1',
@@ -34,24 +46,36 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
     },
   ];
 
+  const diamondPacks = [
+    { id: 0, diamonds: '100 + 10', bonus: '+10%', price: '$1.15', tag: 'Básico' },
+    { id: 1, diamonds: '310 + 31', bonus: '+10%', price: '$3.20', tag: 'Popular' },
+    { id: 2, diamonds: '520 + 52', bonus: '+10%', price: '$5.25', tag: 'Más Vendido' },
+    { id: 3, diamonds: '1,060 + 106', bonus: '+10%', price: '$10.50', tag: 'Pro' },
+    { id: 4, diamonds: 'Pase Booyah', bonus: 'Pase', price: '$2.10', tag: 'Temporada' },
+    { id: 5, diamonds: 'Membresía Semanal', bonus: 'VIP', price: '$1.99', tag: 'Ahorro' },
+  ];
+
+  const handleQuickRecharge = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (playerId.trim()) {
+      router.push(`/catalogo/free-fire?player_id=${encodeURIComponent(playerId.trim())}`);
+    } else {
+      router.push('/catalogo/free-fire');
+    }
+  };
+
   return (
-    <section className="relative overflow-hidden pt-8 pb-16 lg:pt-14 lg:pb-24 bg-festive-hero bg-cyber-grid-pattern">
-      {/* RAYOS DE NEÓN Y LUZ AMBIENTAL */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-neon-blue/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/3 right-10 w-72 h-72 bg-magenta/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-20 left-10 w-64 h-64 bg-ice/15 rounded-full blur-[90px] pointer-events-none" />
-
-      {/* RAYO DE NEÓN CRUZANDO */}
-      <div className="absolute top-12 left-0 w-full h-[1px] neon-lightning pointer-events-none opacity-40" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+    <HeroBackground className="pt-6 pb-6 lg:pt-10 lg:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full my-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
-          {/* COLUMNA IZQUIERDA: TEXTOS, ESCARCHA Y BOTONES EN FORMA DE PÍLDORA (7 COLS) */}
+          {/* ========================================================= */}
+          {/* COLUMNA IZQUIERDA: TITULARES Y BADGES FESTIVOS (7 COLS) */}
+          {/* ========================================================= */}
           <div className="lg:col-span-7 text-center lg:text-left space-y-6">
             
             {/* BADGE FESTIVO NEÓN / MAGENTA */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pitch-panel border border-neon-blue/50 text-neon-cyan text-xs font-bold shadow-neon-border">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pitch-panel border border-neon-blue/50 text-neon-cyan text-xs font-bold shadow-neon-border backdrop-blur-md">
               <Sparkles className="w-4 h-4 text-magenta animate-pulse" />
               <span>TEMPORADA INVERNAL • RECARGAS OFICIALES FREE FIRE</span>
               <Snowflake className="w-3.5 h-3.5 text-ice animate-spin-slow" />
@@ -60,7 +84,7 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
             {/* TÍTULO 3D CON ESCARCHA Y NIEVE ACUMULADA EN LA PARTE SUPERIOR */}
             <div className="space-y-1">
               <div className="inline-block relative snow-cap">
-                <span className="text-4xl sm:text-6xl lg:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pure-white via-ice-light to-neon-blue tracking-tight drop-shadow-[0_4px_12px_rgba(0,210,255,0.4)] block">
+                <span className="text-4xl sm:text-6xl lg:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pure-white via-ice-light to-neon-blue tracking-tight drop-shadow-[0_4px_16px_rgba(0,210,255,0.5)] block">
                   FREE FIRE
                 </span>
               </div>
@@ -72,33 +96,36 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
               </h1>
             </div>
 
-            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              Consigue tus diamantes, pases Booyah y membresías oficiales entregados en segundos vía ID. Disfruta de la mejor tasa para revendedores y compras automáticas con tu billetera interna.
+            {/* TEXTO DESCRIPTIVO EN BLANCO PURO Y CELESTE */}
+            <p className="text-sm sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              Diamantes oficiales garantizados, Pases Booyah y Membresías por tu{' '}
+              <strong className="text-pure-white">ID de Jugador</strong>. Compra segura con acreditación{' '}
+              <span className="text-neon-cyan font-bold">automatizada en &lt; 2 minutos</span>{' '}
+              o paga al instante con tu <strong className="text-gold font-bold">Saldo Wallet</strong>.
             </p>
 
-            {/* BOTONES EN FORMA DE PÍLDORA CON RESPLANDOR AZUL ELÉCTRICO (SPEC) */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2">
+            {/* BOTONES EN FORMA DE PÍLDORA CON RESPLANDOR AZUL ELÉCTRICO */}
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
               <Link
                 href="/catalogo"
-                className="btn-neon-pill inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-extrabold uppercase tracking-wider"
+                className="btn-neon-pill w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wider font-extrabold px-8 py-3.5"
               >
-                <Zap className="w-4 h-4 fill-white" />
-                Ver Catálogo
-                <ArrowRight className="w-4 h-4 ml-1" />
+                <span>Ver Catálogo Navideño</span>
+                <ArrowRight className="w-4 h-4 text-ice group-hover:translate-x-1 transition-transform" />
               </Link>
 
               <Link
-                href="/billetera?accion=recargar"
-                className="btn-ice-pill inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-bold tracking-wide"
+                href="/billetera"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-pitch-panel/90 text-ice-light hover:text-white border border-ice/40 hover:border-neon-blue transition-all duration-300 font-bold text-sm shadow-ice-glow backdrop-blur-md"
               >
-                <Gift className="w-4 h-4 text-ice" />
-                Recargar Saldo Wallet
+                <Wallet className="w-4 h-4 text-neon-cyan" />
+                <span>Recargar Saldo Wallet</span>
               </Link>
             </div>
 
             {/* BADGES DE CONFIANZA EN CAJAS RECTANGULARES NEGRAS CON BORDE NEÓN */}
-            <div className="grid grid-cols-3 gap-3 pt-6 max-w-lg mx-auto lg:mx-0">
-              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left">
+            <div className="grid grid-cols-3 gap-3 pt-4 max-w-lg mx-auto lg:mx-0">
+              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left backdrop-blur-md">
                 <div className="flex items-center justify-center lg:justify-start gap-1 text-gold">
                   <Star className="w-3.5 h-3.5 fill-gold" />
                   <span className="font-black text-white text-sm">4.9 / 5</span>
@@ -106,7 +133,7 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
                 <p className="text-[10px] text-slate-400 mt-0.5">Opiniones Verificadas</p>
               </div>
 
-              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left">
+              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left backdrop-blur-md">
                 <div className="flex items-center justify-center lg:justify-start gap-1 text-neon-cyan">
                   <Zap className="w-3.5 h-3.5 fill-neon-cyan" />
                   <span className="font-black text-white text-sm">&lt; 2 Min</span>
@@ -114,7 +141,7 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
                 <p className="text-[10px] text-slate-400 mt-0.5">Entrega Inmediata</p>
               </div>
 
-              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left">
+              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left backdrop-blur-md">
                 <div className="flex items-center justify-center lg:justify-start gap-1 text-magenta-light">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span className="font-black text-white text-sm">100% Legal</span>
@@ -124,26 +151,29 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: COMPOSICIÓN VISUAL CON LOS 2 AVATARES Y REGALOS AZUL HIELO (5 COLS) */}
-          <div className="lg:col-span-5 relative flex flex-col items-center justify-center min-h-[440px]">
+          {/* ========================================================= */}
+          {/* COLUMNA DERECHA: UI LIMPIA DE RECARGAS FREE FIRE (5 COLS) */}
+          {/* (CERO PERSONAJES, CERO SILUETAS, CERO AVATARES)          */}
+          {/* ========================================================= */}
+          <div className="lg:col-span-5 relative flex flex-col items-center justify-center">
             
-            {/* PANEL PRINCIPAL CIBERNÉTICO OPACADO */}
-            <div className="w-full max-w-md rounded-3xl cyber-panel p-6 relative overflow-hidden">
+            {/* PANEL PRINCIPAL CIBERNÉTICO DE RECARGA DIRECTA */}
+            <div className="w-full max-w-md rounded-3xl cyber-panel p-6 relative overflow-hidden backdrop-blur-xl border border-neon-blue/40 shadow-[0_0_35px_rgba(0,210,255,0.2)]">
               
               {/* ESCARCHA SUPERIOR DEL PANEL */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
 
-              {/* ENCABEZADO DE PANEL */}
+              {/* ENCABEZADO DE LA UI DE RECARGA */}
               <div className="flex items-center justify-between pb-4 border-b border-neon-blue/20">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-pitch-black border border-neon-blue/40 flex items-center justify-center text-neon-cyan font-black text-xs shadow-neon-border">
-                    FF
+                  <div className="w-10 h-10 rounded-xl bg-pitch-black border border-neon-blue/50 flex items-center justify-center text-neon-cyan shadow-neon-border">
+                    <Gamepad2 className="w-5 h-5 text-neon-cyan" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-white text-xs sm:text-sm">RM & Masha Gaming</h3>
+                    <h3 className="font-black text-white text-sm">Recarga Rápida Free Fire</h3>
                     <p className="text-[10px] text-ice-light flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-ping" />
-                      Servidor Navideño En Línea
+                      Acreditación por ID Oficial
                     </p>
                   </div>
                 </div>
@@ -152,91 +182,126 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
                 </span>
               </div>
 
-              {/* ILUSTRACIÓN TEMÁTICA DE LOS DOS AVATARES */}
-              <div className="my-5 p-4 rounded-2xl bg-pitch-black/80 border border-neon-blue/30 relative overflow-hidden">
-                <div className="flex items-center justify-between gap-3">
-                  
-                  {/* AVATAR MASCULINO TÁCTICO OSCURO (IZQUIERDA) */}
-                  <div className="flex flex-col items-center text-center space-y-1.5 w-1/2 border-r border-neon-blue/20 pr-2">
-                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-slate-900 to-black border-2 border-slate-700 p-1 flex items-center justify-center shadow-lg">
-                      <span className="text-3xl">🥷</span>
-                      {/* GORRA CON LOGO "F" DORADO */}
-                      <span className="absolute -top-1.5 -right-1 px-1 rounded bg-gold text-slate-950 font-black text-[9px] border border-white">
-                        F
+              {/* FORMULARIO DE RECARGA INTERACTIVO */}
+              <form onSubmit={handleQuickRecharge} className="mt-4 space-y-4">
+                
+                {/* PASO 1: ID DE JUGADOR */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-neon-blue/20 text-neon-cyan text-[10px] font-black flex items-center justify-center">
+                        1
                       </span>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-black text-white">Táctico Urbano</p>
-                      <p className="text-[9px] text-slate-400">Bandana • Armas tácticas</p>
-                    </div>
+                      ID de Jugador (Free Fire)
+                    </label>
+                    <span className="text-[10px] text-slate-400">Solo números</span>
                   </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      value={playerId}
+                      onChange={(e) => setPlayerId(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="Ej: 1982736450"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-pitch-black/80 border border-neon-blue/30 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors"
+                      maxLength={14}
+                    />
+                    {playerId.length >= 8 && (
+                      <CheckCircle2 className="w-4 h-4 text-neon-cyan absolute right-3 top-3" />
+                    )}
+                  </div>
+                </div>
 
-                  {/* AVATAR FEMENINA CAPERUCITA FUCSIA (DERECHA) */}
-                  <div className="flex flex-col items-center text-center space-y-1.5 w-1/2 pl-2">
-                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-magenta/20 to-pitch-black border-2 border-magenta p-1 flex items-center justify-center shadow-[0_0_15px_rgba(255,0,127,0.4)]">
-                      <span className="text-3xl">👸</span>
-                      {/* CAPUCHA FUCSIA & TRENZAS */}
-                      <span className="absolute -top-1.5 -right-1 px-1 rounded bg-magenta text-white font-black text-[9px]">
-                        XMAS
+                {/* PASO 2: SELECCIÓN DE PAQUETE DE DIAMANTES */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-neon-blue/20 text-neon-cyan text-[10px] font-black flex items-center justify-center">
+                        2
                       </span>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-black text-magenta-light">Caperucita Neón</p>
-                      <p className="text-[9px] text-ice-light">Trenzas • Capucha Fucsia</p>
-                    </div>
+                      Selecciona tu Paquete
+                    </label>
+                    <span className="text-[10px] text-gold font-bold flex items-center gap-0.5">
+                      <Gift className="w-3 h-3" /> +10% Extra Navideño
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {diamondPacks.map((pack) => {
+                      const isSelected = selectedPack === pack.id;
+                      return (
+                        <button
+                          key={pack.id}
+                          type="button"
+                          onClick={() => setSelectedPack(pack.id)}
+                          className={`relative p-2.5 rounded-xl text-left border transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-neon-blue/15 border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.25)]'
+                              : 'bg-pitch-black/70 border-neon-blue/20 hover:border-neon-blue/50 text-slate-300'
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">💎</span>
+                            <span className="text-xs font-bold text-white line-clamp-1">
+                              {pack.diamonds}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-ice/10 text-ice-light font-medium">
+                              {pack.tag}
+                            </span>
+                            <span className="text-xs font-extrabold text-gold">
+                              {pack.price}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* CAJAS DE REGALOS NAVIDEÑAS APILADAS EN AZUL HIELO CON LAZOS PLATEADOS */}
-                <div className="mt-4 pt-3 border-t border-neon-blue/20 flex items-center justify-between text-xs bg-navy-deepest/60 p-2 rounded-xl">
+                {/* INFORMACIÓN DE PAGO AUTOMÁTICO */}
+                <div className="p-2.5 rounded-xl bg-pitch-black/80 border border-neon-blue/20 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-ice/20 border border-ice flex items-center justify-center text-ice font-black shadow-ice-glow">
-                      🎁
+                    <div className="w-7 h-7 rounded-lg bg-neon-blue/15 border border-neon-blue/40 flex items-center justify-center text-neon-cyan">
+                      <Zap className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold text-white block">Caja Navideña Azul Hielo</span>
-                      <span className="text-[9px] text-ice">Lazos plateados con bonos de diamantes</span>
+                      <p className="text-[11px] font-bold text-white">Acreditación Automática</p>
+                      <p className="text-[9px] text-slate-400">Paga con Saldo Wallet o Depósito Directo</p>
                     </div>
                   </div>
-                  <span className="text-xs font-black text-gold-bright">+10% Bonus</span>
+                  <span className="text-[10px] font-extrabold text-neon-cyan uppercase">
+                    &lt; 2 MIN
+                  </span>
                 </div>
+
+                {/* BOTÓN PÍLDORA NEÓN DE ACCIÓN DIRECTA */}
+                <button
+                  type="submit"
+                  className="btn-neon-pill w-full py-3 text-center font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,210,255,0.4)]"
+                >
+                  <span>Recargar Ahora</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              <div className="mt-3 text-center">
+                <Link
+                  href="/catalogo"
+                  className="text-[11px] text-ice-light hover:text-white transition-colors underline underline-offset-2"
+                >
+                  Ver todos los juegos y opciones del catálogo completo
+                </Link>
               </div>
-
-              {/* LISTA RÁPIDA DE OFERTAS NAVIDEÑAS */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-pitch-black/70 border border-neon-blue/20 hover:border-neon-blue/50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">💎</span>
-                    <div>
-                      <p className="text-xs font-bold text-white">100 + 10 Diamantes</p>
-                      <p className="text-[9px] text-slate-400">Directo a tu ID de Free Fire</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-gold-bright">$1.15</span>
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-pitch-black/70 border border-magenta/30 hover:border-magenta transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🎟️</span>
-                    <div>
-                      <p className="text-xs font-bold text-white">Pase Booyah / Membresía</p>
-                      <p className="text-[9px] text-magenta-light">Recompensas e items exclusivos</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-magenta-light">$2.10</span>
-                </div>
-              </div>
-
-              <Link
-                href="/catalogo/free-fire"
-                className="btn-neon-pill w-full block py-2.5 mt-4 text-center font-bold text-xs uppercase tracking-wider"
-              >
-                Comprar Ahora
-              </Link>
             </div>
 
             {/* BURBUJAS CIRCULARES FLOTANTES DE RESEÑAS CON CONTORNOS DE HIELO (SPEC 5.3) */}
-            <div className="absolute -top-6 -left-4 sm:-left-8 max-w-[210px] p-2.5 rounded-2xl bg-pitch-panel/95 border border-ice shadow-ice-glow backdrop-blur-md animate-float">
+            <div className="hidden sm:block absolute -top-4 -left-6 max-w-[200px] p-2.5 rounded-2xl bg-pitch-panel/95 border border-ice shadow-ice-glow backdrop-blur-md animate-float pointer-events-none">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-ice to-neon-blue text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
                   {defaultReviews[0].avatar}
@@ -255,7 +320,7 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
               </p>
             </div>
 
-            <div className="absolute -bottom-6 -right-2 sm:-right-6 max-w-[220px] p-2.5 rounded-2xl bg-pitch-panel/95 border border-magenta shadow-neon-magenta backdrop-blur-md animate-float-delayed">
+            <div className="hidden sm:block absolute -bottom-4 -right-4 max-w-[210px] p-2.5 rounded-2xl bg-pitch-panel/95 border border-magenta shadow-neon-magenta backdrop-blur-md animate-float-delayed pointer-events-none">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-magenta to-pink-500 text-white font-black text-xs flex items-center justify-center shrink-0">
                   {defaultReviews[1].avatar}
@@ -277,20 +342,8 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
           </div>
         </div>
       </div>
-
-      {/* BASE INVERNAL CON SIMULACIÓN DE DUNAS DE NIEVE SUAVE (SPEC 2) */}
-      <div className="relative w-full h-8 mt-10 pointer-events-none overflow-hidden">
-        <svg
-          viewBox="0 0 1200 120"
-          preserveAspectRatio="none"
-          className="absolute bottom-0 w-full h-8 text-navy-deepest fill-current"
-        >
-          <path d="M0,0 C150,90 350,-40 500,40 C650,120 900,-20 1200,30 L1200,120 L0,120 Z" />
-        </svg>
-      </div>
-    </section>
+    </HeroBackground>
   );
 }
 
 export default HeroChristmas;
-
