@@ -94,8 +94,12 @@ export default async function HomePage() {
               <div className="absolute -top-10 -right-10 w-28 h-28 bg-neon/10 rounded-full blur-2xl group-hover:bg-neon/20 transition-all pointer-events-none" />
 
               <div>
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-navy via-pitch to-navy border border-neon/30 flex items-center justify-center text-neon text-2xl mb-6 shadow-[0_0_15px_rgba(0,210,255,0.2)] group-hover:scale-105 group-hover:border-neon transition-transform">
-                  {idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'}
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-navy via-pitch to-navy border border-neon/30 flex items-center justify-center text-neon text-2xl mb-6 shadow-[0_0_15px_rgba(0,210,255,0.2)] group-hover:scale-105 group-hover:border-neon transition-transform overflow-hidden">
+                  {cat.imagen_url ? (
+                    <img src={cat.imagen_url} alt={cat.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'
+                  )}
                 </div>
 
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-neon/10 text-neon border border-neon/20 mb-2">

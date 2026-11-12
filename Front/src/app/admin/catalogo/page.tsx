@@ -18,6 +18,8 @@ import {
   Sparkles,
   HelpCircle,
   Eye,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 const ALL_ROLES: UserRole[] = [
@@ -59,7 +61,42 @@ export default function AdminCatalogoPage() {
   const [formDesc, setFormDesc] = useState('');
   const [formQuantity, setFormQuantity] = useState('0');
   const [formOrder, setFormOrder] = useState('0');
+  const [formImageUrl, setFormImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Subir imagen (PNG, JPG, WEBP, SVG) a Supabase Storage bucket 'catalogo'
+  const handleImageFileUpload = async (file: File) => {
+    try {
+      setUploadingImage(true);
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const folder =
+        activeModal === 'category'
+          ? 'categorias'
+          : activeModal === 'subcategory'
+          ? 'subcategorias'
+          : 'productos';
+      const cleanName = (formSlug || generateSlug(formName) || 'item').slice(0, 30);
+      const path = `${folder}/${cleanName}_${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('catalogo')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('catalogo')
+        .getPublicUrl(path);
+
+      setFormImageUrl(publicUrl);
+    } catch (err: any) {
+      console.error('Error subiendo imagen:', err);
+      alert('Error al subir imagen: ' + (err.message || err));
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Generador de slug a partir del nombre
   const generateSlug = (text: string) => {
@@ -243,12 +280,14 @@ export default function AdminCatalogoPage() {
       setFormDesc(existingItem.descripcion || '');
       setFormQuantity(existingItem.cantidad_items ? String(existingItem.cantidad_items) : '0');
       setFormOrder(existingItem.orden ? String(existingItem.orden) : '0');
+      setFormImageUrl(existingItem.imagen_url || '');
     } else {
       setFormName('');
       setFormSlug('');
       setFormDesc('');
       setFormQuantity('0');
       setFormOrder('0');
+      setFormImageUrl('');
     }
   };
 
@@ -273,6 +312,7 @@ export default function AdminCatalogoPage() {
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
+            imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
             activo: true,
           }).select().single();
@@ -283,6 +323,7 @@ export default function AdminCatalogoPage() {
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
+            imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
           }).eq('id', selectedCatId);
           if (error) throw error;
@@ -299,6 +340,7 @@ export default function AdminCatalogoPage() {
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
+            imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
             activo: true,
           }).select().single();
@@ -309,6 +351,7 @@ export default function AdminCatalogoPage() {
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
+            imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
           }).eq('id', selectedSubId);
           if (error) throw error;
@@ -325,6 +368,7 @@ export default function AdminCatalogoPage() {
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
+            imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
             activo: true,
           }).select().single();
@@ -335,6 +379,7 @@ export default function AdminCatalogoPage() {
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
+            imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
           }).eq('id', selectedProdId);
           if (error) throw error;
@@ -550,9 +595,22 @@ export default function AdminCatalogoPage() {
             })}
           </select>
           {currentCategory && (
-            <p className="text-[10px] font-mono text-ice/60 truncate">
-              Slug: /{currentCategory.slug}
-            </p>
+            <div className="flex items-center gap-2 pt-2 border-t border-neon/10">
+              {currentCategory.imagen_url ? (
+                <img
+                  src={currentCategory.imagen_url}
+                  alt={currentCategory.nombre}
+                  className="w-7 h-7 object-cover rounded-lg border border-neon/30 shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-navy border border-neon/20 flex items-center justify-center text-xs text-ice/40 shrink-0">
+                  📁
+                </div>
+              )}
+              <p className="text-[10px] font-mono text-ice/60 truncate flex-1">
+                Slug: /{currentCategory.slug}
+              </p>
+            </div>
           )}
         </div>
 
@@ -612,9 +670,22 @@ export default function AdminCatalogoPage() {
             })}
           </select>
           {currentSubcategory && (
-            <p className="text-[10px] font-mono text-ice/60 truncate">
-              Slug: /{currentSubcategory.slug}
-            </p>
+            <div className="flex items-center gap-2 pt-2 border-t border-neon/10">
+              {currentSubcategory.imagen_url ? (
+                <img
+                  src={currentSubcategory.imagen_url}
+                  alt={currentSubcategory.nombre}
+                  className="w-7 h-7 object-cover rounded-lg border border-neon/30 shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-navy border border-neon/20 flex items-center justify-center text-xs text-ice/40 shrink-0">
+                  ⚡
+                </div>
+              )}
+              <p className="text-[10px] font-mono text-ice/60 truncate flex-1">
+                Slug: /{currentSubcategory.slug}
+              </p>
+            </div>
           )}
         </div>
 
@@ -674,9 +745,22 @@ export default function AdminCatalogoPage() {
             })}
           </select>
           {currentProduct && (
-            <p className="text-[10px] font-mono text-ice/60 truncate">
-              Slug: /{currentProduct.slug}
-            </p>
+            <div className="flex items-center gap-2 pt-2 border-t border-neon/10">
+              {currentProduct.imagen_url ? (
+                <img
+                  src={currentProduct.imagen_url}
+                  alt={currentProduct.nombre}
+                  className="w-7 h-7 object-cover rounded-lg border border-neon/30 shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-navy border border-neon/20 flex items-center justify-center text-xs text-ice/40 shrink-0">
+                  💎
+                </div>
+              )}
+              <p className="text-[10px] font-mono text-ice/60 truncate flex-1">
+                Slug: /{currentProduct.slug}
+              </p>
+            </div>
           )}
         </div>
 
@@ -879,6 +963,72 @@ export default function AdminCatalogoPage() {
                     onChange={(e) => setFormSlug(generateSlug(e.target.value))}
                     className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
                   />
+                </div>
+              )}
+
+              {activeModal !== 'variant' && (
+                <div>
+                  <label className="block text-xs font-mono uppercase text-ice mb-1">
+                    Imagen / Ícono (PNG, JPG, WEBP):
+                  </label>
+
+                  {/* Vista previa en miniatura */}
+                  {formImageUrl && (
+                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-pitch/90 border border-neon/40 mb-2">
+                      <img
+                        src={formImageUrl}
+                        alt="Vista previa"
+                        className="w-12 h-12 object-cover rounded-lg border border-neon/30 shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-mono text-neon truncate block">
+                          {formImageUrl}
+                        </span>
+                        <span className="text-[10px] font-mono text-emerald-400">
+                          ✓ Imagen cargada
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormImageUrl('')}
+                        className="p-1 text-magenta hover:text-white transition-colors"
+                        title="Quitar imagen"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <label className="btn-ice-pill px-3 py-2 text-[11px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 shrink-0">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploadingImage ? 'Subiendo...' : 'Subir Archivo'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                        disabled={uploadingImage}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageFileUpload(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-xs font-mono text-ice/40">o</span>
+                    <input
+                      type="url"
+                      value={formImageUrl}
+                      onChange={(e) => setFormImageUrl(e.target.value)}
+                      placeholder="Pegar enlace de imagen (https://...)"
+                      className="flex-1 px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                    />
+                  </div>
+                  <p className="text-[10px] font-mono text-ice/50 mt-1">
+                    Formatos soportados: PNG, JPG, JPEG, WEBP y SVG.
+                  </p>
                 </div>
               )}
 

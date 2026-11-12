@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { PaymentMethod } from '@/types/database.types';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 export default function AdminMetodosPagoPage() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -11,7 +12,36 @@ export default function AdminMetodosPagoPage() {
   // Formulario de creación
   const [nombre, setNombre] = useState('');
   const [formato, setFormato] = useState<'solo_numeros' | 'solo_letras' | 'alfanumerico'>('solo_numeros');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Subir logo o QR del método de pago a Supabase Storage
+  const handleUploadLogo = async (file: File) => {
+    try {
+      setUploadingLogo(true);
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const cleanName = nombre.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'metodo';
+      const path = `metodos_pago/${cleanName}_${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('catalogo')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('catalogo')
+        .getPublicUrl(path);
+
+      setLogoUrl(publicUrl);
+    } catch (err: any) {
+      console.error('Error subiendo logo de pago:', err);
+      alert('Error al subir logo: ' + (err.message || err));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const fetchMethods = async () => {
     try {
@@ -58,11 +88,13 @@ export default function AdminMetodosPagoPage() {
       const { error } = await supabase.from('payment_methods').insert({
         nombre_metodo: nombre.trim(),
         formato_requerido: formato,
+        logo_url: logoUrl.trim() || null,
         activo: true,
       });
 
       if (error) throw error;
       setNombre('');
+      setLogoUrl('');
       await fetchMethods();
     } catch (err: any) {
       alert('Error creando método: ' + err.message);
@@ -124,9 +156,64 @@ export default function AdminMetodosPagoPage() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Logo o Ícono (PNG, JPG, WEBP):
+              </label>
+
+              {logoUrl && (
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-pitch/90 border border-neon/40 mb-2">
+                  <img
+                    src={logoUrl}
+                    alt="Logo preview"
+                    className="w-10 h-10 object-contain rounded-lg border border-neon/30 p-1 bg-navy"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[11px] font-mono text-neon truncate block">
+                      {logoUrl}
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400">
+                      ✓ Logo asignado
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl('')}
+                    className="p-1 text-magenta hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <label className="btn-ice-pill px-3 py-2 text-[11px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 shrink-0">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{uploadingLogo ? 'Subiendo...' : 'Subir Imagen'}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                    disabled={uploadingLogo}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadLogo(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                <input
+                  type="url"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  placeholder="O URL directa (https://...)"
+                  className="flex-1 px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon"
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || uploadingLogo}
               className="w-full btn-neon-pill py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 mt-2"
             >
               {submitting ? 'Guardando...' : '+ Agregar Método de Pago'}
@@ -154,11 +241,24 @@ export default function AdminMetodosPagoPage() {
                     key={methodId}
                     className="p-4 rounded-xl bg-navy/60 border border-neon/20 flex items-center justify-between"
                   >
-                    <div>
-                      <h3 className="font-bold text-pure text-sm">{m.nombre_metodo}</h3>
-                      <div className="text-[11px] font-mono text-ice/70 flex items-center gap-2 mt-0.5">
-                        <span>Validación:</span>
-                        <span className="text-neon">{m.formato_requerido}</span>
+                    <div className="flex items-center gap-3">
+                      {m.logo_url ? (
+                        <img
+                          src={m.logo_url}
+                          alt={m.nombre_metodo}
+                          className="w-10 h-10 object-contain rounded-lg bg-pitch p-1 border border-neon/30 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-pitch border border-neon/20 flex items-center justify-center text-sm shrink-0">
+                          🏦
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-bold text-pure text-sm">{m.nombre_metodo}</h3>
+                        <div className="text-[11px] font-mono text-ice/70 flex items-center gap-2 mt-0.5">
+                          <span>Validación:</span>
+                          <span className="text-neon">{m.formato_requerido}</span>
+                        </div>
                       </div>
                     </div>
 

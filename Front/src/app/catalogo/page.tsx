@@ -68,8 +68,12 @@ export default async function CatalogoGeneralPage() {
               className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
             >
               <div>
-                <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-neon group-hover:scale-105 transition-transform">
-                  {idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'}
+                <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-neon group-hover:scale-105 transition-transform overflow-hidden">
+                  {cat.imagen_url ? (
+                    <img src={cat.imagen_url} alt={cat.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'
+                  )}
                 </div>
                 <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
                   {cat.nombre}

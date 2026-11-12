@@ -1,0 +1,13 @@
+{
+  "name": "rm-and-masha-project",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RM & Masha - Plataforma Web de Recargas Gamer para Free Fire",
+  "scripts": {
+    "build": "npm --prefix Front run build",
+    "start": "npm --prefix Front run start",
+    "dev": "npm --prefix Front run dev",
+    "lint": "npm --prefix Front run lint"
+  }
+}
+

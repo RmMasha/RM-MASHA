@@ -86,8 +86,12 @@ export default async function CategoriaNivelPage({ params }: Props) {
                 className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-ice group-hover:scale-105 transition-transform">
-                    {idx % 2 === 0 ? '⚡' : '🔥'}
+                  <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-ice group-hover:scale-105 transition-transform overflow-hidden">
+                    {sub.imagen_url ? (
+                      <img src={sub.imagen_url} alt={sub.nombre} className="w-full h-full object-cover" />
+                    ) : (
+                      idx % 2 === 0 ? '⚡' : '🔥'
+                    )}
                   </div>
                   <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
                     {sub.nombre}

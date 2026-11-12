@@ -110,6 +110,12 @@ export default async function SubcategoriaProductosPage({ params }: Props) {
                     </span>
                   </div>
 
+                  {prod.imagen_url && (
+                    <div className="w-full h-32 rounded-xl overflow-hidden mb-4 border border-neon/20 bg-pitch">
+                      <img src={prod.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
                   <h3 className="text-lg font-bold text-pure mb-2">
                     {prod.nombre}
                   </h3>

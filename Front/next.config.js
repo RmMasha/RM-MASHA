@@ -5,9 +5,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'xvwcmcrfgrclhebbcrze.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
+        pathname: '/**',
       },
       {
         protocol: 'https',
@@ -16,7 +20,15 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'placehold.co',
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.imgur.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.discordapp.com',
+      },
     ],
   },
 };
