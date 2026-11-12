@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Zap,
   ShieldCheck,
-  Star,
   ArrowRight,
   Sparkles,
   Snowflake,
@@ -79,33 +78,6 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
                 <Wallet className="w-4 h-4 text-neon-cyan" />
                 <span>Recargar Saldo Wallet</span>
               </Link>
-            </div>
-
-            {/* BADGES DE CONFIANZA EN CAJAS RECTANGULARES NEGRAS CON BORDE NEÓN */}
-            <div className="grid grid-cols-3 gap-3 pt-4 max-w-lg mx-auto lg:mx-0">
-              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left backdrop-blur-md">
-                <div className="flex items-center justify-center lg:justify-start gap-1 text-gold">
-                  <Star className="w-3.5 h-3.5 fill-gold" />
-                  <span className="font-black text-white text-sm">4.9 / 5</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-0.5">Opiniones Verificadas</p>
-              </div>
-
-              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left backdrop-blur-md">
-                <div className="flex items-center justify-center lg:justify-start gap-1 text-neon-cyan">
-                  <Zap className="w-3.5 h-3.5 fill-neon-cyan" />
-                  <span className="font-black text-white text-sm">&lt; 2 Min</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-0.5">Entrega Inmediata</p>
-              </div>
-
-              <div className="cyber-panel p-3 rounded-2xl text-center lg:text-left backdrop-blur-md">
-                <div className="flex items-center justify-center lg:justify-start gap-1 text-magenta-light">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span className="font-black text-white text-sm">100% Legal</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-0.5">Vía ID Oficial Garena</p>
-              </div>
             </div>
           </div>
 
