@@ -1,21 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Zap,
   ShieldCheck,
   Star,
   ArrowRight,
-  Gift,
-  Flame,
   Sparkles,
   Snowflake,
-  CheckCircle2,
-  Gamepad2,
-  CreditCard,
   Wallet,
+  Users,
+  CheckCircle2,
 } from 'lucide-react';
 import { Review } from '@/types/database.types';
 import HeroBackground from './HeroBackground';
@@ -26,55 +22,16 @@ interface HeroProps {
 }
 
 export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
-  const router = useRouter();
-  const [playerId, setPlayerId] = useState('');
-  const [selectedPack, setSelectedPack] = useState(2); // Default to 520 diamantes
-
-  const defaultReviews = [
-    {
-      id: '1',
-      nickname: 'Kevin_FF',
-      texto: '¡Llegaron los 1060 diamantes en menos de 2 minutos! Súper recomendado.',
-      estrellas: 5,
-      avatar: 'K',
-    },
-    {
-      id: '2',
-      nickname: 'ValenGamer',
-      texto: 'Pagué con saldo directo de mi billetera y la entrega fue automática. Excelente.',
-      estrellas: 5,
-      avatar: 'V',
-    },
-  ];
-
-  const diamondPacks = [
-    { id: 0, diamonds: '100 + 10', bonus: '+10%', price: '$1.15', tag: 'Básico' },
-    { id: 1, diamonds: '310 + 31', bonus: '+10%', price: '$3.20', tag: 'Popular' },
-    { id: 2, diamonds: '520 + 52', bonus: '+10%', price: '$5.25', tag: 'Más Vendido' },
-    { id: 3, diamonds: '1,060 + 106', bonus: '+10%', price: '$10.50', tag: 'Pro' },
-    { id: 4, diamonds: 'Pase Booyah', bonus: 'Pase', price: '$2.10', tag: 'Temporada' },
-    { id: 5, diamonds: 'Membresía Semanal', bonus: 'VIP', price: '$1.99', tag: 'Ahorro' },
-  ];
-
-  const handleQuickRecharge = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (playerId.trim()) {
-      router.push(`/catalogo/free-fire?player_id=${encodeURIComponent(playerId.trim())}`);
-    } else {
-      router.push('/catalogo/free-fire');
-    }
-  };
-
   return (
-    <HeroBackground className="pt-6 pb-6 lg:pt-10 lg:pb-12">
+    <HeroBackground className="pt-8 pb-10 lg:pt-14 lg:pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full my-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-
+          
           {/* ========================================================= */}
-          {/* COLUMNA IZQUIERDA: TITULARES Y BADGES FESTIVOS (7 COLS) */}
+          {/* COLUMNA IZQUIERDA: TITULARES Y BOTONES FESTIVOS (7 COLS) */}
           {/* ========================================================= */}
           <div className="lg:col-span-7 text-center lg:text-left space-y-6">
-
+            
             {/* BADGE FESTIVO NEÓN / MAGENTA */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pitch-panel border border-neon-blue/50 text-neon-cyan text-xs font-bold shadow-neon-border backdrop-blur-md">
               <Sparkles className="w-4 h-4 text-magenta animate-pulse" />
@@ -153,161 +110,82 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
           </div>
 
           {/* ========================================================= */}
-          {/* COLUMNA DERECHA: UI LIMPIA DE RECARGAS FREE FIRE (5 COLS) */}
-          {/* (CERO PERSONAJES, CERO SILUETAS, CERO AVATARES)          */}
+          {/* COLUMNA DERECHA: PANEL DE REFERENCIAS DEL HERO (5 COLS)   */}
+          {/* (SE BORRÓ TODO EL FORMULARIO DE RECARGA DIRECTA)          */}
           {/* ========================================================= */}
-          <div className="lg:col-span-5 relative flex flex-col items-center justify-center">
-
-            {/* PANEL PRINCIPAL CIBERNÉTICO DE RECARGA DIRECTA */}
-            <div className="w-full max-w-md rounded-3xl cyber-panel p-6 relative overflow-hidden backdrop-blur-xl border border-neon-blue/40 shadow-[0_0_35px_rgba(0,210,255,0.2)]">
-
+          <div className="lg:col-span-5 relative flex flex-col items-center justify-center min-h-[380px]">
+            
+            {/* PANEL CIBERNÉTICO DE REFERENCIAS DEL HERO EN TIEMPO REAL */}
+            <div className="w-full max-w-md rounded-3xl cyber-panel p-6 sm:p-8 relative overflow-hidden backdrop-blur-xl border border-neon-blue/40 shadow-[0_0_35px_rgba(0,210,255,0.25)] space-y-6">
+              
               {/* ESCARCHA SUPERIOR DEL PANEL */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
 
-              {/* ENCABEZADO DE LA UI DE RECARGA */}
+              {/* ENCABEZADO DEL PANEL DE REFERENCIAS */}
               <div className="flex items-center justify-between pb-4 border-b border-neon-blue/20">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-xl bg-pitch-black border border-neon-blue/50 flex items-center justify-center text-neon-cyan shadow-neon-border">
-                    <Gamepad2 className="w-5 h-5 text-neon-cyan" />
+                    <Users className="w-5 h-5 text-neon-cyan" />
                   </div>
                   <div>
-                    <h3 className="font-black text-white text-sm">Recarga Rápida Free Fire</h3>
-                    <p className="text-[10px] text-ice-light flex items-center gap-1">
+                    <h3 className="font-black text-white text-sm uppercase tracking-wider">
+                      Referencias del Hero
+                    </h3>
+                    <p className="text-[10px] text-ice-light flex items-center gap-1.5 font-mono">
                       <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-ping" />
-                      Acreditación por ID Oficial
+                      <span>Comunidad en Tiempo Real</span>
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-magenta/15 text-magenta-light font-bold border border-magenta/30">
-                  Edición Invierno
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-magenta/15 text-magenta-light font-bold border border-magenta/30 font-mono">
+                  Rotación 4s
                 </span>
               </div>
 
-              {/* FORMULARIO DE RECARGA INTERACTIVO */}
-              <form onSubmit={handleQuickRecharge} className="mt-4 space-y-4">
+              {/* CONTENEDOR CENTRAL: TARJETA DE REFERENCIA ROTANDO DINÁMICAMENTE */}
+              <div className="py-6 px-4 rounded-2xl bg-pitch-black/80 border border-neon-blue/30 relative flex flex-col items-center justify-center min-h-[140px] shadow-inner text-center">
+                <p className="text-[11px] font-mono text-ice/60 mb-4 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-gold" />
+                  <span>Testimonios & Acreditaciones en Vivo</span>
+                </p>
 
-                {/* PASO 1: ID DE JUGADOR */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span className="w-4 h-4 rounded-full bg-neon-blue/20 text-neon-cyan text-[10px] font-black flex items-center justify-center">
-                        1
-                      </span>
-                      ID de Jugador (Free Fire)
-                    </label>
-                    <span className="text-[10px] text-slate-400">Solo números</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      value={playerId}
-                      onChange={(e) => setPlayerId(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="Ej: 1982736450"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-pitch-black/80 border border-neon-blue/30 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors"
-                      maxLength={14}
-                    />
-                    {playerId.length >= 8 && (
-                      <CheckCircle2 className="w-4 h-4 text-neon-cyan absolute right-3 top-3" />
-                    )}
-                  </div>
-                </div>
-
-                {/* PASO 2: SELECCIÓN DE PAQUETE DE DIAMANTES */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span className="w-4 h-4 rounded-full bg-neon-blue/20 text-neon-cyan text-[10px] font-black flex items-center justify-center">
-                        2
-                      </span>
-                      Selecciona tu Paquete
-                    </label>
-                    <span className="text-[10px] text-gold font-bold flex items-center gap-0.5">
-                      <Gift className="w-3 h-3" /> +10% Extra Navideño
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {diamondPacks.map((pack) => {
-                      const isSelected = selectedPack === pack.id;
-                      return (
-                        <button
-                          key={pack.id}
-                          type="button"
-                          onClick={() => setSelectedPack(pack.id)}
-                          className={`relative p-2.5 rounded-xl text-left border transition-all duration-200 ${isSelected
-                              ? 'bg-neon-blue/15 border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.25)]'
-                              : 'bg-pitch-black/70 border-neon-blue/20 hover:border-neon-blue/50 text-slate-300'
-                            }`}
-                        >
-                          {isSelected && (
-                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
-                          )}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm">💎</span>
-                            <span className="text-xs font-bold text-white line-clamp-1">
-                              {pack.diamonds}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-ice/10 text-ice-light font-medium">
-                              {pack.tag}
-                            </span>
-                            <span className="text-xs font-extrabold text-gold">
-                              {pack.price}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* INFORMACIÓN DE PAGO AUTOMÁTICO */}
-                <div className="p-2.5 rounded-xl bg-pitch-black/80 border border-neon-blue/20 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-neon-blue/15 border border-neon-blue/40 flex items-center justify-center text-neon-cyan">
-                      <Zap className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold text-white">Acreditación Automática</p>
-                      <p className="text-[9px] text-slate-400">Paga con Saldo Wallet o Depósito Directo</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-extrabold text-neon-cyan uppercase">
-                    &lt; 2 MIN
-                  </span>
-                </div>
-
-                {/* BOTÓN PÍLDORA NEÓN DE ACCIÓN DIRECTA */}
-                <button
-                  type="submit"
-                  className="btn-neon-pill w-full py-3 text-center font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,210,255,0.4)]"
-                >
-                  <span>Recargar Ahora</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-
-              <div className="mt-3 text-center">
-                <Link
-                  href="/catalogo"
-                  className="text-[11px] text-ice-light hover:text-white transition-colors underline underline-offset-2"
-                >
-                  Ver todos los juegos y opciones del catálogo completo
-                </Link>
+                {/* COMPONENTE DE REFERENCIAS ROTANDO CADA 4 SEGUNDOS */}
+                <HeroReviewsFloat
+                  position="top-left"
+                  className="!relative !top-auto !left-auto !right-auto !bottom-auto mx-auto"
+                  intervalMs={4000}
+                  variant="cyan"
+                />
               </div>
+
+              {/* INDICADORES DE CONFIANZA */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="p-3 rounded-xl bg-pitch-black/70 border border-neon-blue/20 text-center">
+                  <p className="text-[10px] font-mono text-slate-400 uppercase">Acreditación</p>
+                  <p className="text-xs font-black text-neon-cyan flex items-center justify-center gap-1 mt-0.5">
+                    <Zap className="w-3.5 h-3.5 fill-neon-cyan" /> &lt; 2 Minutos
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-pitch-black/70 border border-magenta/20 text-center">
+                  <p className="text-[10px] font-mono text-slate-400 uppercase">Seguridad</p>
+                  <p className="text-xs font-black text-magenta-light flex items-center justify-center gap-1 mt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5" /> 100% ID Garena
+                  </p>
+                </div>
+              </div>
+
+              {/* BOTÓN PÍLDORA NEÓN PARA IR AL CATÁLOGO */}
+              <Link
+                href="/catalogo"
+                className="btn-neon-pill w-full py-3.5 text-center font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,210,255,0.4)]"
+              >
+                <span>Ver Catálogo Completo</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
 
-            {/* CÁPSULAS FLOTANTES DE REFERENCIAS EN TIEMPO REAL CON ROTACIÓN INFINITA (4s) */}
-            <HeroReviewsFloat
-              position="top-left"
-              variant="cyan"
-              defaultIndexOffset={0}
-              intervalMs={4000}
-            />
-
+            {/* SEGUNDA CÁPSULA FLOTANTE EN ESQUINA INFERIOR DERECHA */}
             <HeroReviewsFloat
               position="bottom-right"
               variant="magenta"
