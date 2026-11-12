@@ -49,6 +49,7 @@ export default function AdminLayout({ children }: Props) {
     { href: '/admin/metodos-pago', label: 'Métodos de Pago', icon: '🏦' },
     { href: '/admin/comentarios', label: 'Referencias del Hero & Reseñas', icon: '🌟' },
     { href: '/admin/notificaciones', label: 'Plantillas de Notificaciones', icon: '🔔' },
+    { href: '/admin/apariencia', label: 'Apariencia & Marca', icon: '🎨' },
   ];
 
   return (

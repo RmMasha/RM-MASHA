@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Category, Subcategory, Product } from '@/types/database.types';
+import EntityReviewsSection from '@/components/common/EntityReviewsSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export default async function SubcategoriaProductosPage({ params }: Props) {
   }
 
   // 2. Obtener la subcategoría
-  const catId = (categoria as Category).id || (categoria as Category).categoria_id;
+  const catId = (categoria as Category).id || (categoria as Category).categoria_id || '';
   const { data: subcategoria } = await supabase
     .from('subcategories')
     .select('*')
@@ -41,7 +42,7 @@ export default async function SubcategoriaProductosPage({ params }: Props) {
   }
 
   // 3. Obtener los productos activos de esta subcategoría
-  const subId = (subcategoria as Subcategory).id || (subcategoria as Subcategory).subcategoria_id;
+  const subId = (subcategoria as Subcategory).id || (subcategoria as Subcategory).subcategoria_id || '';
   const { data: productos } = await supabase
     .from('products')
     .select('*, variants(*, prices(*))')
@@ -144,6 +145,13 @@ export default async function SubcategoriaProductosPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* Reseñas Multinivel (Subcategoría) */}
+      <EntityReviewsSection
+        entidadTipo="subcategoria"
+        entidadId={subId}
+        entidadNombre={(subcategoria as Subcategory).nombre}
+      />
     </div>
   );
 }

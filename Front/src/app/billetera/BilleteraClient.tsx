@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PaymentMethod, BalanceRecharge, Transaction } from '@/types/database.types';
-import { formatCurrency, formatDate, getOrderStatusBadge } from '@/lib/utils';
+import { formatCurrency, formatDate, getOrderStatusBadge, validatePaymentReference } from '@/lib/utils';
 
 export default function BilleteraClient() {
   const router = useRouter();
@@ -28,6 +28,8 @@ export default function BilleteraClient() {
 
   // Tab activo: 'recargar' | 'transacciones' | 'historial_recargas'
   const [activeTab, setActiveTab] = useState<'recargar' | 'transacciones' | 'historial_recargas'>('recargar');
+  // Filtro de transacciones
+  const [txFilter, setTxFilter] = useState<'todos' | 'ingreso' | 'descuento_compra' | 'reembolso'>('todos');
 
   // Redirigir si no está logueado
   useEffect(() => {
@@ -103,6 +105,13 @@ export default function BilleteraClient() {
 
     if (!referencia.trim()) {
       setMessage({ type: 'error', text: 'Ingresa el número de comprobante o referencia de pago.' });
+      return;
+    }
+
+    const selectedM = paymentMethods.find((m) => (m.id || m.metodo_id) === selectedMethodId);
+    const refCheck = validatePaymentReference(referencia, selectedM?.formato_requerido);
+    if (!refCheck.isValid) {
+      setMessage({ type: 'error', text: refCheck.message || 'Formato de referencia incorrecto.' });
       return;
     }
 
@@ -221,11 +230,10 @@ export default function BilleteraClient() {
       {/* MENSAJES DE ESTADO */}
       {message && (
         <div
-          className={`p-4 rounded-xl mb-6 text-xs md:text-sm font-mono flex items-center justify-between ${
-            message.type === 'success'
+          className={`p-4 rounded-xl mb-6 text-xs md:text-sm font-mono flex items-center justify-between ${message.type === 'success'
               ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
               : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             <span>{message.type === 'success' ? '✅' : '⚠️'}</span>
@@ -241,31 +249,28 @@ export default function BilleteraClient() {
       <div className="flex gap-2 mb-8 border-b border-neon/20 pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('recargar')}
-          className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
-            activeTab === 'recargar'
+          className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === 'recargar'
               ? 'btn-neon-pill font-bold'
               : 'text-ice/70 hover:text-white hover:bg-navy/60'
-          }`}
+            }`}
         >
           Recargar Saldo
         </button>
         <button
           onClick={() => setActiveTab('transacciones')}
-          className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
-            activeTab === 'transacciones'
+          className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === 'transacciones'
               ? 'btn-neon-pill font-bold'
               : 'text-ice/70 hover:text-white hover:bg-navy/60'
-          }`}
+            }`}
         >
           Historial de Gastos & Movimientos ({transactions.length})
         </button>
         <button
           onClick={() => setActiveTab('historial_recargas')}
-          className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
-            activeTab === 'historial_recargas'
+          className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === 'historial_recargas'
               ? 'btn-neon-pill font-bold'
               : 'text-ice/70 hover:text-white hover:bg-navy/60'
-          }`}
+            }`}
         >
           Depósitos Enviados ({recharges.length})
         </button>
@@ -337,17 +342,60 @@ export default function BilleteraClient() {
 
             {/* Número o código de referencia */}
             <div>
-              <label className="block text-xs font-mono uppercase text-ice mb-2">
-                Número de Referencia / ID de Transacción <span className="text-magenta">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Ej: 9812470129"
-                required
-                value={referencia}
-                onChange={(e) => setReferencia(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-navy/90 border border-neon/30 text-pure font-mono text-sm focus:outline-none focus:border-neon"
-              />
+              {(() => {
+                const currentMethod = paymentMethods.find((m) => (m.id || m.metodo_id) === selectedMethodId);
+                const refCheck = validatePaymentReference(referencia, currentMethod?.formato_requerido);
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-mono uppercase text-ice">
+                        Número de Referencia / ID de Transacción <span className="text-magenta">*</span>
+                      </label>
+                      {currentMethod?.formato_requerido && (
+                        <span className="text-[10px] font-mono text-neon bg-neon/10 px-2.5 py-0.5 rounded-full border border-neon/30">
+                          {currentMethod.formato_requerido === 'solo_numeros'
+                            ? 'Solo números'
+                            : currentMethod.formato_requerido === 'solo_letras'
+                              ? 'Solo letras'
+                              : 'Alfanumérico'}
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={
+                        currentMethod?.formato_requerido === 'solo_numeros'
+                          ? 'Ej: 9812470129 (solo dígitos)'
+                          : currentMethod?.formato_requerido === 'solo_letras'
+                            ? 'Ej: TRANSFERENCIA BANCO'
+                            : 'Ej: TXID-89218941 o 9812470129'
+                      }
+                      required
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl bg-navy/90 border text-pure font-mono text-sm focus:outline-none transition-colors ${referencia.trim().length > 0
+                          ? refCheck.isValid
+                            ? 'border-emerald-500/70 focus:border-emerald-400'
+                            : 'border-magenta/70 focus:border-magenta'
+                          : 'border-neon/30 focus:border-neon'
+                        }`}
+                    />
+                    {referencia.trim().length > 0 && (
+                      <div className="mt-1.5 text-[11px] font-mono flex items-center gap-1.5">
+                        {refCheck.isValid ? (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <span>✓</span> Formato de referencia verificado
+                          </span>
+                        ) : (
+                          <span className="text-magenta flex items-center gap-1">
+                            <span>⚠️</span> {refCheck.message}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Subir comprobante */}
@@ -380,60 +428,114 @@ export default function BilleteraClient() {
 
       {activeTab === 'transacciones' && (
         <div className="cyber-panel rounded-2xl p-6 md:p-8 border-neon/30">
-          <h2 className="text-lg font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
-            Movimientos y Gastos de Saldo
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-lg font-bold uppercase tracking-wider text-pure flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+              Movimientos y Gastos de Saldo
+            </h2>
 
-          {transactions.length === 0 ? (
-            <p className="text-xs font-mono text-ice/60 py-6 text-center">
-              No se registran movimientos en tu cuenta aún.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr className="border-b border-neon/20 text-ice/70">
-                    <th className="py-3 px-4">Fecha</th>
-                    <th className="py-3 px-4">Tipo</th>
-                    <th className="py-3 px-4">Detalle</th>
-                    <th className="py-3 px-4 text-right">Monto</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neon/10">
-                  {transactions.map((tx) => {
-                    const txId = tx.id || tx.transaccion_id;
-                    return (
-                      <tr key={txId} className="hover:bg-navy/40">
-                        <td className="py-3 px-4 text-ice/80">{formatDate(tx.fecha)}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${
-                              tx.tipo === 'ingreso'
-                                ? 'bg-neon/15 text-neon border border-neon/30'
-                                : tx.tipo === 'descuento_compra'
-                                ? 'bg-magenta/15 text-magenta border border-magenta/30'
-                                : 'bg-gold/15 text-gold border border-gold/30'
-                            }`}
-                          >
-                            {tx.tipo.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-pure">{tx.descripcion || 'Transacción de billetera'}</td>
-                        <td
-                          className={`py-3 px-4 text-right font-bold ${
-                            tx.tipo === 'ingreso' ? 'text-neon' : 'text-magenta'
-                          }`}
-                        >
-                          {tx.tipo === 'ingreso' ? '+' : '-'}{formatCurrency(tx.monto)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            {/* Filtros de transacciones */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'todos', label: 'Todos', count: transactions.length },
+                { id: 'ingreso', label: 'Ingresos', count: transactions.filter((t) => t.tipo === 'ingreso').length },
+                { id: 'descuento_compra', label: 'Compras', count: transactions.filter((t) => t.tipo === 'descuento_compra').length },
+                { id: 'reembolso', label: 'Reembolsos', count: transactions.filter((t) => t.tipo === 'reembolso' || t.tipo === 'ajuste_manual').length },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setTxFilter(f.id as any)}
+                  className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${txFilter === f.id
+                      ? 'bg-neon text-pitch shadow-[0_0_10px_#00D2FF]'
+                      : 'bg-navy/80 border border-neon/20 text-ice/80 hover:border-neon/50'
+                    }`}
+                >
+                  <span>{f.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${txFilter === f.id ? 'bg-pitch/30 text-pitch' : 'bg-neon/15 text-neon'
+                    }`}>
+                    {f.count}
+                  </span>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+
+          {(() => {
+            const filteredTransactions = transactions.filter((tx) => {
+              if (txFilter === 'todos') return true;
+              if (txFilter === 'ingreso') return tx.tipo === 'ingreso';
+              if (txFilter === 'descuento_compra') return tx.tipo === 'descuento_compra';
+              if (txFilter === 'reembolso') return tx.tipo === 'reembolso' || tx.tipo === 'ajuste_manual';
+              return true;
+            });
+
+            if (transactions.length === 0) {
+              return (
+                <p className="text-xs font-mono text-ice/60 py-6 text-center">
+                  No se registran movimientos en tu cuenta aún.
+                </p>
+              );
+            }
+
+            if (filteredTransactions.length === 0) {
+              return (
+                <p className="text-xs font-mono text-ice/60 py-6 text-center">
+                  No hay transacciones para el filtro "{txFilter.replace('_', ' ')}".
+                </p>
+              );
+            }
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-neon/20 text-ice/70">
+                      <th className="py-3 px-4">Fecha</th>
+                      <th className="py-3 px-4">Tipo</th>
+                      <th className="py-3 px-4">Detalle</th>
+                      <th className="py-3 px-4 text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neon/10">
+                    {filteredTransactions.map((tx) => {
+                      const txId = tx.id || tx.transaccion_id;
+                      const isPositive = tx.tipo === 'ingreso' || tx.tipo === 'reembolso';
+
+                      return (
+                        <tr key={txId} className="hover:bg-navy/40">
+                          <td className="py-3 px-4 text-ice/80">{formatDate(tx.fecha)}</td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${tx.tipo === 'ingreso'
+                                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                  : tx.tipo === 'descuento_compra'
+                                    ? 'bg-magenta/15 text-magenta border border-magenta/30'
+                                    : 'bg-gold/15 text-gold border border-gold/30'
+                                }`}
+                            >
+                              {tx.tipo.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-pure">{tx.descripcion || 'Transacción de billetera'}</td>
+                          <td
+                            className={`py-3 px-4 text-right font-bold ${tx.tipo === 'ingreso'
+                                ? 'text-emerald-400'
+                                : tx.tipo === 'descuento_compra'
+                                  ? 'text-magenta'
+                                  : 'text-gold'
+                              }`}
+                          >
+                            {isPositive ? '+' : '-'}{formatCurrency(tx.monto)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       )}
 

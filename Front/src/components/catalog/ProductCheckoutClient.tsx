@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { Product, Variant, Price, ProductRequirement, PaymentMethod, Review } from '@/types/database.types';
-import { formatCurrency, getRoleBadge } from '@/lib/utils';
+import { formatCurrency, getRoleBadge, validatePaymentReference } from '@/lib/utils';
 
 interface VariantWithPrices extends Variant {
   prices: Price[];
@@ -46,6 +46,7 @@ export default function ProductCheckoutClient({
   const [selectedMethodId, setSelectedMethodId] = useState<string>(
     paymentMethods[0]?.id || paymentMethods[0]?.metodo_id || ''
   );
+  const selectedMethod = paymentMethods.find((m) => (m.id || m.metodo_id) === selectedMethodId);
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [referenciaText, setReferenciaText] = useState<string>('');
 
@@ -166,6 +167,12 @@ export default function ProductCheckoutClient({
       return;
     }
 
+    const refValidation = validatePaymentReference(referenciaText, selectedMethod?.formato_requerido);
+    if (!refValidation.isValid) {
+      setErrorMessage(refValidation.message || 'El formato del número de referencia es incorrecto.');
+      return;
+    }
+
     if (!comprobanteFile) {
       setErrorMessage('Por favor sube la captura o foto del comprobante de pago.');
       return;
@@ -190,8 +197,6 @@ export default function ProductCheckoutClient({
       if (uploadError) {
         throw new Error(`Error al subir comprobante: ${uploadError.message}`);
       }
-
-      const selectedMethod = paymentMethods.find((m) => (m.id || m.metodo_id) === selectedMethodId);
 
       // 2. Crear pedido en estado 'nuevo'
       const { error: orderError } = await supabase.from('orders').insert({
@@ -503,16 +508,52 @@ export default function ProductCheckoutClient({
 
                   {/* Número de Referencia */}
                   <div>
-                    <label className="block text-[11px] font-mono uppercase text-ice/80 mb-1">
-                      Nº de Referencia / Comprobante:
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-mono uppercase text-ice/80">
+                        Nº de Referencia / Comprobante:
+                      </label>
+                      {selectedMethod?.formato_requerido && (
+                        <span className="text-[10px] font-mono text-neon bg-neon/10 px-2 py-0.5 rounded border border-neon/30">
+                          {selectedMethod.formato_requerido === 'solo_numeros'
+                            ? 'Solo números'
+                            : selectedMethod.formato_requerido === 'solo_letras'
+                            ? 'Solo letras'
+                            : 'Alfanumérico'}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
-                      placeholder="Ej: 198283749"
+                      placeholder={
+                        selectedMethod?.formato_requerido === 'solo_numeros'
+                          ? 'Ej: 198283749'
+                          : selectedMethod?.formato_requerido === 'solo_letras'
+                          ? 'Ej: PAGO BANCO'
+                          : 'Ej: 0x9f83... o TXID-892'
+                      }
                       value={referenciaText}
                       onChange={(e) => setReferenciaText(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
+                      className={`w-full px-3 py-2 rounded-lg bg-pitch border text-pure text-xs font-mono focus:outline-none transition-colors ${
+                        referenciaText.trim().length > 0
+                          ? validatePaymentReference(referenciaText, selectedMethod?.formato_requerido).isValid
+                            ? 'border-emerald-500/70 focus:border-emerald-400'
+                            : 'border-magenta/70 focus:border-magenta'
+                          : 'border-neon/30 focus:border-neon'
+                      }`}
                     />
+                    {referenciaText.trim().length > 0 && (
+                      <div className="mt-1 text-[11px] font-mono flex items-center gap-1.5">
+                        {validatePaymentReference(referenciaText, selectedMethod?.formato_requerido).isValid ? (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <span>✓</span> Formato de referencia verificado
+                          </span>
+                        ) : (
+                          <span className="text-magenta flex items-center gap-1">
+                            <span>⚠️</span> {validatePaymentReference(referenciaText, selectedMethod?.formato_requerido).message}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Subir comprobante */}

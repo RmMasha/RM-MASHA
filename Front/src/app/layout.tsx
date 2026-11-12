@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { AppearanceProvider } from '@/context/AppearanceContext';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import Snowfall from '@/components/common/Snowfall';
@@ -32,23 +33,25 @@ export default function RootLayout({
         {/* Efecto de copos de nieve interactivos */}
         <Snowfall count={45} />
 
-        {/* Proveedor de Estado Global de Autenticación */}
-        <AuthProvider>
-          <div className="relative z-10 flex flex-col min-h-screen">
-            {/* Barra de Navegación Minimalista Superior */}
-            <Navbar />
+        {/* Proveedor de Estado Global de Autenticación y Apariencia */}
+        <AppearanceProvider>
+          <AuthProvider>
+            <div className="relative z-10 flex flex-col min-h-screen">
+              {/* Barra de Navegación Minimalista Superior */}
+              <Navbar />
 
-            {/* Contenedor Principal Aislado con Error Boundary */}
-            <main className="flex-1">
-              <ErrorBoundary fallbackTitle="Interferencia en Vista Principal">
-                {children}
-              </ErrorBoundary>
-            </main>
+              {/* Contenedor Principal Aislado con Error Boundary */}
+              <main className="flex-1">
+                <ErrorBoundary fallbackTitle="Interferencia en Vista Principal">
+                  {children}
+                </ErrorBoundary>
+              </main>
 
-            {/* Pie de Página */}
-            <Footer />
-          </div>
-        </AuthProvider>
+              {/* Pie de Página */}
+              <Footer />
+            </div>
+          </AuthProvider>
+        </AppearanceProvider>
       </body>
     </html>
   );

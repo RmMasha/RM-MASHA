@@ -215,3 +215,16 @@ export interface NotificationTemplate {
   activo: boolean;
   updated_at?: string;
 }
+
+
+export interface AppearanceSettings {
+  id: string;
+  logo_url?: string | null;
+  favicon_url?: string | null;
+  color_neon_principal: string;
+  color_neon_secundario: string;
+  color_magenta: string;
+  color_ice: string;
+  color_gold: string;
+  updated_at?: string;
+}

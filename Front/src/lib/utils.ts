@@ -71,3 +71,35 @@ export function getOrderStatusBadge(status: string): string {
       return base + 'bg-navy/60 text-ice/60 border-neon/20';
   }
 }
+
+export function validatePaymentReference(
+  reference: string,
+  formato?: string | null
+): { isValid: boolean; message?: string } {
+  const clean = (reference || '').trim();
+  if (!clean) {
+    return { isValid: false, message: 'La referencia o comprobante es obligatoria.' };
+  }
+
+  const fmt = (formato || 'alfanumerico').toLowerCase();
+
+  if (fmt === 'solo_numeros') {
+    const isNum = /^[0-9]+$/.test(clean);
+    return isNum
+      ? { isValid: true }
+      : { isValid: false, message: 'Este método exige exclusivamente números (0-9).' };
+  }
+
+  if (fmt === 'solo_letras') {
+    const isLetters = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(clean);
+    return isLetters
+      ? { isValid: true }
+      : { isValid: false, message: 'Este método solo permite letras y espacios.' };
+  }
+
+  // Alfanumérico por defecto
+  const isAlphaNum = /^[a-zA-Z0-9\-_#]+$/.test(clean);
+  return isAlphaNum
+    ? { isValid: true }
+    : { isValid: false, message: 'Formato alfanumérico inválido (solo letras, dígitos y guiones).' };
+}

@@ -9,6 +9,7 @@ export default function RegistroClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
+  const urlRefCode = searchParams.get('ref') || '';
 
   const { signUp } = useAuth();
 
@@ -19,7 +20,7 @@ export default function RegistroClient() {
   const [nickname, setNickname] = useState('');
   const [edad, setEdad] = useState('');
   const [pais, setPais] = useState('Venezuela');
-  const [codigoReferido, setCodigoReferido] = useState('');
+  const [codigoReferido, setCodigoReferido] = useState(urlRefCode);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

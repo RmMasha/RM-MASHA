@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Category, Subcategory } from '@/types/database.types';
+import EntityReviewsSection from '@/components/common/EntityReviewsSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export default async function CategoriaNivelPage({ params }: Props) {
   }
 
   // 2. Obtener las subcategorías activas
-  const catId = (categoria as Category).id || (categoria as Category).categoria_id;
+  const catId = (categoria as Category).id || (categoria as Category).categoria_id || '';
   const { data: subcategorias } = await supabase
     .from('subcategories')
     .select('*')
@@ -107,6 +108,13 @@ export default async function CategoriaNivelPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* Reseñas Multinivel (Categoría) */}
+      <EntityReviewsSection
+        entidadTipo="categoria"
+        entidadId={catId}
+        entidadNombre={(categoria as Category).nombre}
+      />
     </div>
   );
 }
