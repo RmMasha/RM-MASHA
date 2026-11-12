@@ -63,8 +63,8 @@ export default function AdminLayout({ children }: Props) {
               Terminal de Control
             </span>
           </div>
-          <h2 className="text-xl font-black text-pure tracking-wider uppercase">
-            RM & <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon to-white">MASHA</span>
+          <h2 className="text-xl font-black text-white tracking-wider uppercase">
+            RM & <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-ice to-pure-white">MASHA</span>
           </h2>
           <div className="flex items-center gap-2 mt-2">
             <span className={getRoleBadge(profile?.rol || 'admin')}>

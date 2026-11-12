@@ -17,12 +17,14 @@ const config: Config = {
           surface: '#0E1738', // Capa intermedia
         },
         neon: {
+          DEFAULT: '#00D2FF', // Azul eléctrico/neón principal
           blue: '#00D2FF',    // Azul eléctrico/neón principal
           cyan: '#00F0FF',    // Resplandor máximo
           glow: '#38BDF8',    // Iluminación suave
         },
         // Colores Secundarios (El Contraste)
         pure: {
+          DEFAULT: '#FFFFFF', // Blanco puro
           white: '#FFFFFF',
         },
         magenta: {
@@ -39,6 +41,7 @@ const config: Config = {
           crystal: '#A5F3FC', // Nieve y papel de regalo navideño
         },
         pitch: {
+          DEFAULT: '#060913', // Negro táctico panel por defecto
           black: '#030712',   // Negro táctico profundo
           panel: '#060913',   // Paneles opacos de alto contraste
           card: '#090D1A',

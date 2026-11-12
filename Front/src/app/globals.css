@@ -19,6 +19,37 @@ body {
   overflow-x: hidden;
 }
 
+/* ========================================================= */
+/* ESTILOS GLOBALES PARA CONTROLES DE FORMULARIO (MODO OSCURO) */
+/* Evita que los navegadores (Chrome/Edge/Safari) los pinten en blanco */
+/* ========================================================= */
+select,
+option,
+input,
+textarea {
+  background-color: #060913 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(0, 210, 255, 0.35);
+}
+
+select option {
+  background-color: #060913 !important;
+  color: #FFFFFF !important;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #0E1738 !important;
+  color: #00D2FF !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(148, 163, 184, 0.65) !important;
+}
+
 /* Cyber Grid Background desactivado a petición del usuario (sin líneas de cuaderno) */
 .bg-cyber-grid-pattern {
   background-image: none;
