@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Review } from '@/types/database.types';
 import HeroBackground from './HeroBackground';
+import HeroReviewsFloat from './HeroReviewsFloat';
 
 interface HeroProps {
   featuredReviews?: Review[];
@@ -68,12 +69,12 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
     <HeroBackground className="pt-6 pb-6 lg:pt-10 lg:pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full my-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
+
           {/* ========================================================= */}
           {/* COLUMNA IZQUIERDA: TITULARES Y BADGES FESTIVOS (7 COLS) */}
           {/* ========================================================= */}
           <div className="lg:col-span-7 text-center lg:text-left space-y-6">
-            
+
             {/* BADGE FESTIVO NEÓN / MAGENTA */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pitch-panel border border-neon-blue/50 text-neon-cyan text-xs font-bold shadow-neon-border backdrop-blur-md">
               <Sparkles className="w-4 h-4 text-magenta animate-pulse" />
@@ -156,10 +157,10 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
           {/* (CERO PERSONAJES, CERO SILUETAS, CERO AVATARES)          */}
           {/* ========================================================= */}
           <div className="lg:col-span-5 relative flex flex-col items-center justify-center">
-            
+
             {/* PANEL PRINCIPAL CIBERNÉTICO DE RECARGA DIRECTA */}
             <div className="w-full max-w-md rounded-3xl cyber-panel p-6 relative overflow-hidden backdrop-blur-xl border border-neon-blue/40 shadow-[0_0_35px_rgba(0,210,255,0.2)]">
-              
+
               {/* ESCARCHA SUPERIOR DEL PANEL */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
 
@@ -184,7 +185,7 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
 
               {/* FORMULARIO DE RECARGA INTERACTIVO */}
               <form onSubmit={handleQuickRecharge} className="mt-4 space-y-4">
-                
+
                 {/* PASO 1: ID DE JUGADOR */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -235,11 +236,10 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
                           key={pack.id}
                           type="button"
                           onClick={() => setSelectedPack(pack.id)}
-                          className={`relative p-2.5 rounded-xl text-left border transition-all duration-200 ${
-                            isSelected
+                          className={`relative p-2.5 rounded-xl text-left border transition-all duration-200 ${isSelected
                               ? 'bg-neon-blue/15 border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.25)]'
                               : 'bg-pitch-black/70 border-neon-blue/20 hover:border-neon-blue/50 text-slate-300'
-                          }`}
+                            }`}
                         >
                           {isSelected && (
                             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
@@ -300,44 +300,20 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
               </div>
             </div>
 
-            {/* BURBUJAS CIRCULARES FLOTANTES DE RESEÑAS CON CONTORNOS DE HIELO (SPEC 5.3) */}
-            <div className="hidden sm:block absolute -top-4 -left-6 max-w-[200px] p-2.5 rounded-2xl bg-pitch-panel/95 border border-ice shadow-ice-glow backdrop-blur-md animate-float pointer-events-none">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-ice to-neon-blue text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
-                  {defaultReviews[0].avatar}
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-white leading-none">
-                    {defaultReviews[0].nickname}
-                  </p>
-                  <div className="flex text-gold text-[9px] mt-0.5">
-                    {'★'.repeat(defaultReviews[0].estrellas)}
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-300 italic line-clamp-2 leading-tight">
-                "{defaultReviews[0].texto}"
-              </p>
-            </div>
+            {/* CÁPSULAS FLOTANTES DE REFERENCIAS EN TIEMPO REAL CON ROTACIÓN INFINITA (4s) */}
+            <HeroReviewsFloat
+              position="top-left"
+              variant="cyan"
+              defaultIndexOffset={0}
+              intervalMs={4000}
+            />
 
-            <div className="hidden sm:block absolute -bottom-4 -right-4 max-w-[210px] p-2.5 rounded-2xl bg-pitch-panel/95 border border-magenta shadow-neon-magenta backdrop-blur-md animate-float-delayed pointer-events-none">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-magenta to-pink-500 text-white font-black text-xs flex items-center justify-center shrink-0">
-                  {defaultReviews[1].avatar}
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-white leading-none">
-                    {defaultReviews[1].nickname}
-                  </p>
-                  <div className="flex text-gold text-[9px] mt-0.5">
-                    {'★'.repeat(defaultReviews[1].estrellas)}
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-300 italic line-clamp-2 leading-tight">
-                "{defaultReviews[1].texto}"
-              </p>
-            </div>
+            <HeroReviewsFloat
+              position="bottom-right"
+              variant="magenta"
+              defaultIndexOffset={2}
+              intervalMs={4000}
+            />
 
           </div>
         </div>

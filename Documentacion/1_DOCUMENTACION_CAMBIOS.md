@@ -104,3 +104,32 @@ Este documento registra cronológicamente cada cambio, modificación, creación 
   - **PC**: `http://localhost:3000`
   - **Móvil (Wi-Fi/LAN)**: `http://192.168.0.6:3000`
 - Compilación de producción `next build` verificada exitosamente (20/20 rutas estáticas y dinámicas).
+
+
+## [2026-11-12] Implementación Completa de Módulos 6.3, 6.5, 6.7 y Reseñas Flotantes en Tiempo Real
+
+### 1. Reseñas Flotantes del Hero en Tiempo Real (`HeroReviewsFloat.tsx`)
+- Conexión a Supabase con filtro `destacado_hero = true` y suscripción Realtime a cambios en la tabla `reviews`.
+- Rediseño ultra-compacto: Solo avatar con halo neón y nombre/nickname del gamer con insignia de verificación (sin texto de comentario ni estrellas).
+- Rotación infinita automática con ciclo de 4 segundos y animación suave `fade-in` / `fade-out`.
+- Integración en `HeroChristmas.tsx` en posiciones flotantes sobre la tarjeta de recarga rápida.
+
+### 2. Control Administrativo de Referencias del Hero (`/admin/comentarios`)
+- Sección dedicada **"Referencias del Hero (En Vivo)"** con:
+  - Previsualizador en tiempo real de la cápsula flotante.
+  - Interruptores de 1 clic para activar o excluir clientes de la rotación.
+  - Selector de intervalo de rotación (3s, 4s, 6s).
+  - Modal para dar de alta referencias directas de clientes VIP.
+
+### 3. Editor de Plantillas de Notificaciones (`/admin/notificaciones` - Módulo 6.5)
+- Creación de tabla `notification_templates` en Supabase con RLS y permisos administrativos.
+- Migración y actualización de RPCs (`aprobar_recarga_saldo` y `rechazar_recarga_saldo`) para interpolar plantillas dinámicas con `{monto}`, `{saldo_actual}`, `{motivo}`, `{codigo}`.
+- Interfaz gráfica completa en `/admin/notificaciones` con inserción rápida de variables, botón de restablecer a fábrica y simulador de notificación push en pantalla de cliente.
+
+### 4. CRUD Completo de Catálogo & Modal de Requisitos (`/admin/catalogo` - Módulo 6.7)
+- Modales de Creación, Edición y Eliminación en los 4 niveles jerárquicos:
+  - Categorías (con generación automática de slug y control de orden).
+  - Subcategorías vinculadas a la categoría activa.
+  - Productos con descripción y estado.
+  - Variantes con sembrado automático de precios para los 6 roles de usuario.
+- Modal flotante especializado para la configuración de Requisitos de Entrega (ID de Jugador, Nickname, Correo, Personalizado).

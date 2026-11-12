@@ -204,3 +204,14 @@ export interface Notification {
   fecha?: string;
   created_at?: string;
 }
+
+
+export interface NotificationTemplate {
+  id: string;
+  titulo: string;
+  categoria: 'pedidos' | 'recargas' | 'saldo' | string;
+  plantilla: string;
+  variables_disponibles: string[];
+  activo: boolean;
+  updated_at?: string;
+}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { formatDate, getOrderStatusBadge } from '@/lib/utils';
+import { getRenderedNotification } from '@/lib/notifications';
 
 export default function AdminPedidosPage() {
   const [activeTab, setActiveTab] = useState<'nuevo' | 'confirmado' | 'entregado' | 'rechazado'>('nuevo');
@@ -59,15 +60,25 @@ export default function AdminPedidosPage() {
 
       if (updateError) throw updateError;
 
-      // 2. Disparar notificación push al cliente
-      let mensaje = '';
-      if (nuevoEstado === 'confirmado') {
-        mensaje = `Tu pedido #${pedidoId.slice(0, 8)} ha sido confirmado y está en cola de acreditación.`;
-      } else if (nuevoEstado === 'entregado') {
-        mensaje = `¡Tus diamantes o servicio del pedido #${pedidoId.slice(0, 8)} han sido entregados con éxito! Revisa tu cuenta de Free Fire.`;
+      // 2. Disparar notificación push personalizada al cliente usando plantilla
+      let templateKey = 'pedido_confirmado';
+      let fallback = `Tu pedido #{codigo} ha sido confirmado y está en cola de acreditación.`;
+      if (nuevoEstado === 'entregado') {
+        templateKey = 'pedido_entregado';
+        fallback = `¡Tus diamantes o servicio del pedido #{codigo} han sido entregados con éxito! Revisa tu cuenta de Free Fire.`;
       } else if (nuevoEstado === 'rechazado') {
-        mensaje = `Tu pedido #${pedidoId.slice(0, 8)} fue rechazado. Motivo: ${motivo || 'Comprobante no válido'}.`;
+        templateKey = 'pedido_rechazado';
+        fallback = `Tu pedido #{codigo} fue rechazado. Motivo: {motivo}.`;
       }
+
+      const mensaje = await getRenderedNotification(
+        templateKey,
+        {
+          codigo: pedidoId.slice(0, 8),
+          motivo: motivo || 'Comprobante no válido',
+        },
+        fallback
+      );
 
       await supabase.from('notifications').insert({
         usuario_id: usuarioId,
@@ -136,19 +147,18 @@ export default function AdminPedidosPage() {
               setActiveTab(tab);
               setPage(1);
             }}
-            className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
-              activeTab === tab
+            className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === tab
                 ? 'btn-neon-pill font-bold shadow-neon'
                 : 'text-ice/70 hover:text-white hover:bg-navy/60'
-            }`}
+              }`}
           >
             {tab === 'nuevo'
               ? 'Nuevos (Pago Directo)'
               : tab === 'confirmado'
-              ? 'Confirmados (En Proceso)'
-              : tab === 'entregado'
-              ? 'Entregados (Historial)'
-              : 'Rechazados'}
+                ? 'Confirmados (En Proceso)'
+                : tab === 'entregado'
+                  ? 'Entregados (Historial)'
+                  : 'Rechazados'}
           </button>
         ))}
       </div>

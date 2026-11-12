@@ -3,7 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Category, Subcategory, Product, Variant, Price, UserRole } from '@/types/database.types';
-import { formatCurrency } from '@/lib/utils';
+import {
+  FolderPlus,
+  Layers,
+  Package,
+  Boxes,
+  PlusCircle,
+  Edit2,
+  Trash2,
+  Save,
+  Settings,
+  X,
+  CheckCircle2,
+  Sparkles,
+  HelpCircle,
+  Eye,
+} from 'lucide-react';
 
 const ALL_ROLES: UserRole[] = [
   'cliente',
@@ -24,29 +39,54 @@ export default function AdminCatalogoPage() {
   const [variants, setVariants] = useState<(Variant & { prices: Price[] })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para nuevo producto/variante
+  // Matriz de edición de precios
   const [editingPrices, setEditingPrices] = useState<Record<string, Record<string, string>>>({});
   const [savingPrices, setSavingPrices] = useState<string | null>(null);
 
-  // Requisitos del producto seleccionado
+  // Requisitos del producto
   const [requirements, setRequirements] = useState<any[]>([]);
+  const [showReqModal, setShowReqModal] = useState(false);
   const [newReqField, setNewReqField] = useState('');
   const [newReqType, setNewReqType] = useState('id_jugador');
 
+  // Modales CRUD
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [activeModal, setActiveModal] = useState<'category' | 'subcategory' | 'product' | 'variant' | null>(null);
+  
+  // Campos del formulario modal
+  const [formName, setFormName] = useState('');
+  const [formSlug, setFormSlug] = useState('');
+  const [formDesc, setFormDesc] = useState('');
+  const [formQuantity, setFormQuantity] = useState('0');
+  const [formOrder, setFormOrder] = useState('0');
+  const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Generador de slug a partir del nombre
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
   // Cargar categorías iniciales
-  const loadCategories = async () => {
+  const loadCategories = async (selectIdAfterLoad?: string) => {
     try {
       setLoading(true);
       const { data } = await supabase.from('categories').select('*').order('orden');
       if (data) {
         setCategories(data);
-        if (data.length > 0 && !selectedCatId) {
+        if (selectIdAfterLoad) {
+          setSelectedCatId(selectIdAfterLoad);
+        } else if (data.length > 0 && !selectedCatId) {
           const firstId = data[0].id || data[0].categoria_id || '';
           setSelectedCatId(firstId);
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error('Error cargando categorías:', err);
     } finally {
       setLoading(false);
     }
@@ -57,51 +97,67 @@ export default function AdminCatalogoPage() {
   }, []);
 
   // Cargar subcategorías cuando cambia categoría seleccionada
-  useEffect(() => {
+  const loadSubcategories = async (selectIdAfterLoad?: string) => {
     if (!selectedCatId) return;
-    const loadSubs = async () => {
+    try {
       const { data } = await supabase
         .from('subcategories')
         .select('*')
         .eq('categoria_id', selectedCatId)
         .order('orden');
       setSubcategories(data || []);
-      if (data && data.length > 0) {
-        const firstSubId = data[0].id || data[0].subcategoria_id || '';
-        setSelectedSubId(firstSubId);
+      if (selectIdAfterLoad) {
+        setSelectedSubId(selectIdAfterLoad);
+      } else if (data && data.length > 0) {
+        setSelectedSubId(data[0].id || data[0].subcategoria_id || '');
       } else {
         setSelectedSubId('');
         setProducts([]);
         setSelectedProdId('');
       }
-    };
-    loadSubs();
+    } catch (err) {
+      console.error('Error cargando subcategorías:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadSubcategories();
   }, [selectedCatId]);
 
   // Cargar productos cuando cambia subcategoría
-  useEffect(() => {
+  const loadProducts = async (selectIdAfterLoad?: string) => {
     if (!selectedSubId) return;
-    const loadProds = async () => {
+    try {
       const { data } = await supabase
         .from('products')
         .select('*')
         .eq('subcategoria_id', selectedSubId)
         .order('orden');
       setProducts(data || []);
-      if (data && data.length > 0) {
-        const firstProdId = data[0].id || data[0].producto_id || '';
-        setSelectedProdId(firstProdId);
+      if (selectIdAfterLoad) {
+        setSelectedProdId(selectIdAfterLoad);
+      } else if (data && data.length > 0) {
+        setSelectedProdId(data[0].id || data[0].producto_id || '');
       } else {
         setSelectedProdId('');
         setVariants([]);
       }
-    };
-    loadProds();
+    } catch (err) {
+      console.error('Error cargando productos:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
   }, [selectedSubId]);
 
   // Cargar variantes, precios y requisitos cuando cambia producto
   const loadProductDetails = async () => {
-    if (!selectedProdId) return;
+    if (!selectedProdId) {
+      setVariants([]);
+      setRequirements([]);
+      return;
+    }
     try {
       // 1. Variantes con precios
       const { data: varsData } = await supabase
@@ -112,7 +168,6 @@ export default function AdminCatalogoPage() {
 
       if (varsData) {
         setVariants(varsData as any);
-        // Inicializar matriz de edición
         const priceMap: Record<string, Record<string, string>> = {};
         for (const v of varsData) {
           const vId = v.id || v.variante_id || '';
@@ -141,7 +196,7 @@ export default function AdminCatalogoPage() {
     loadProductDetails();
   }, [selectedProdId]);
 
-  // Guardar precios de una variante
+  // Guardar matriz de precios
   const handleSavePrices = async (varianteId: string) => {
     try {
       setSavingPrices(varianteId);
@@ -171,7 +226,220 @@ export default function AdminCatalogoPage() {
     }
   };
 
-  // Agregar requisito al producto
+  // ==========================================
+  // MANEJADORES DE APERTURA DE MODAL CRUD
+  // ==========================================
+  const openModal = (
+    level: 'category' | 'subcategory' | 'product' | 'variant',
+    mode: 'create' | 'edit',
+    existingItem?: any
+  ) => {
+    setActiveModal(level);
+    setModalMode(mode);
+
+    if (mode === 'edit' && existingItem) {
+      setFormName(existingItem.nombre || '');
+      setFormSlug(existingItem.slug || '');
+      setFormDesc(existingItem.descripcion || '');
+      setFormQuantity(existingItem.cantidad_items ? String(existingItem.cantidad_items) : '0');
+      setFormOrder(existingItem.orden ? String(existingItem.orden) : '0');
+    } else {
+      setFormName('');
+      setFormSlug('');
+      setFormDesc('');
+      setFormQuantity('0');
+      setFormOrder('0');
+    }
+  };
+
+  const closeModal = () => {
+    setActiveModal(null);
+    setFormSubmitting(false);
+  };
+
+  // Submit modal según nivel
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) return;
+
+    try {
+      setFormSubmitting(true);
+      const slugVal = formSlug.trim() || generateSlug(formName);
+      const orderNum = parseInt(formOrder, 10) || 0;
+
+      if (activeModal === 'category') {
+        if (modalMode === 'create') {
+          const { data, error } = await supabase.from('categories').insert({
+            nombre: formName.trim(),
+            slug: slugVal,
+            descripcion: formDesc.trim(),
+            orden: orderNum,
+            activo: true,
+          }).select().single();
+          if (error) throw error;
+          await loadCategories(data.id);
+        } else {
+          const { error } = await supabase.from('categories').update({
+            nombre: formName.trim(),
+            slug: slugVal,
+            descripcion: formDesc.trim(),
+            orden: orderNum,
+          }).eq('id', selectedCatId);
+          if (error) throw error;
+          await loadCategories(selectedCatId);
+        }
+      } else if (activeModal === 'subcategory') {
+        if (!selectedCatId) {
+          alert('Primero selecciona una categoría padre.');
+          return;
+        }
+        if (modalMode === 'create') {
+          const { data, error } = await supabase.from('subcategories').insert({
+            categoria_id: selectedCatId,
+            nombre: formName.trim(),
+            slug: slugVal,
+            descripcion: formDesc.trim(),
+            orden: orderNum,
+            activo: true,
+          }).select().single();
+          if (error) throw error;
+          await loadSubcategories(data.id);
+        } else {
+          const { error } = await supabase.from('subcategories').update({
+            nombre: formName.trim(),
+            slug: slugVal,
+            descripcion: formDesc.trim(),
+            orden: orderNum,
+          }).eq('id', selectedSubId);
+          if (error) throw error;
+          await loadSubcategories(selectedSubId);
+        }
+      } else if (activeModal === 'product') {
+        if (!selectedSubId) {
+          alert('Primero selecciona una subcategoría padre.');
+          return;
+        }
+        if (modalMode === 'create') {
+          const { data, error } = await supabase.from('products').insert({
+            subcategoria_id: selectedSubId,
+            nombre: formName.trim(),
+            slug: slugVal,
+            descripcion: formDesc.trim(),
+            orden: orderNum,
+            activo: true,
+          }).select().single();
+          if (error) throw error;
+          await loadProducts(data.id);
+        } else {
+          const { error } = await supabase.from('products').update({
+            nombre: formName.trim(),
+            slug: slugVal,
+            descripcion: formDesc.trim(),
+            orden: orderNum,
+          }).eq('id', selectedProdId);
+          if (error) throw error;
+          await loadProducts(selectedProdId);
+        }
+      } else if (activeModal === 'variant') {
+        if (!selectedProdId) {
+          alert('Primero selecciona un producto padre.');
+          return;
+        }
+        const qtyNum = parseFloat(formQuantity) || 0;
+        if (modalMode === 'create') {
+          const { data: newVar, error: varErr } = await supabase.from('variants').insert({
+            producto_id: selectedProdId,
+            nombre: formName.trim(),
+            descripcion: formDesc.trim(),
+            cantidad_items: qtyNum,
+            orden: orderNum,
+            activo: true,
+          }).select().single();
+          if (varErr) throw varErr;
+
+          // Sembrar precios base para los 6 roles
+          for (const role of ALL_ROLES) {
+            await supabase.from('prices').insert({
+              variante_id: newVar.id,
+              rol: role,
+              precio: 1.00,
+            });
+          }
+          await loadProductDetails();
+        } else {
+          // Edit variant
+          const targetVar = variants.find(v => (v.id || v.variante_id) === formSlug);
+          if (targetVar) {
+            const { error } = await supabase.from('variants').update({
+              nombre: formName.trim(),
+              descripcion: formDesc.trim(),
+              cantidad_items: qtyNum,
+              orden: orderNum,
+            }).eq('id', formSlug);
+            if (error) throw error;
+            await loadProductDetails();
+          }
+        }
+      }
+
+      closeModal();
+    } catch (err: any) {
+      console.error('Error en operación CRUD:', err);
+      alert('Error: ' + err.message);
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  // Eliminaciones
+  const handleDeleteCategory = async () => {
+    if (!selectedCatId) return;
+    if (!confirm('¿Seguro que deseas eliminar esta categoría? Se eliminarán todas sus subcategorías, productos y variantes.')) return;
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', selectedCatId);
+      if (error) throw error;
+      await loadCategories();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  const handleDeleteSubcategory = async () => {
+    if (!selectedSubId) return;
+    if (!confirm('¿Seguro que deseas eliminar esta subcategoría?')) return;
+    try {
+      const { error } = await supabase.from('subcategories').delete().eq('id', selectedSubId);
+      if (error) throw error;
+      await loadSubcategories();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProdId) return;
+    if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', selectedProdId);
+      if (error) throw error;
+      await loadProducts();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  const handleDeleteVariant = async (varId: string) => {
+    if (!confirm('¿Eliminar esta variante?')) return;
+    try {
+      const { error } = await supabase.from('variants').delete().eq('id', varId);
+      if (error) throw error;
+      await loadProductDetails();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  // Requisitos: Agregar y Eliminar
   const handleAddRequirement = async () => {
     if (!selectedProdId || !newReqField.trim()) return;
     try {
@@ -192,7 +460,6 @@ export default function AdminCatalogoPage() {
     }
   };
 
-  // Eliminar requisito
   const handleDeleteRequirement = async (requisitoId: string) => {
     try {
       await supabase.from('product_requirements').delete().eq('id', requisitoId);
@@ -202,28 +469,72 @@ export default function AdminCatalogoPage() {
     }
   };
 
+  const currentCategory = categories.find(c => (c.id || c.categoria_id) === selectedCatId);
+  const currentSubcategory = subcategories.find(s => (s.id || s.subcategoria_id) === selectedSubId);
+  const currentProduct = products.find(p => (p.id || p.producto_id) === selectedProdId);
+
   return (
     <div className="space-y-6">
-      {/* Cabecera */}
-      <div className="cyber-panel rounded-2xl p-6 border-neon/30">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/15 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-2">
-          <span>❄</span> Módulo 6.7: Jerarquía de Catálogo & Precios Dinámicos por Rol
+      {/* CABECERA */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30 flex justify-between items-center">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/15 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-2">
+            <Sparkles className="w-3.5 h-3.5 text-neon-cyan" />
+            <span>Módulo 6.7: CRUD de Jerarquía de Catálogo & Precios por Rol</span>
+          </div>
+          <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
+            Administración del Catálogo
+          </h1>
+          <p className="text-xs text-ice/70 font-mono mt-1">
+            Gestión en 4 niveles jerárquicos: Categorías → Subcategorías → Productos → Variantes con matriz de precios por rol.
+          </p>
         </div>
-        <h1 className="text-2xl font-black text-pure uppercase tracking-wider">
-          Administración de Catálogo
-        </h1>
-        <p className="text-xs text-ice/70 font-mono mt-1">
-          Navegación y configuración en 4 niveles: Categoría → Subcategoría → Producto → Variantes con precios por rol.
-        </p>
       </div>
 
-      {/* Selectores de Nivel Jerárquico */}
-      <div className="cyber-panel rounded-2xl p-6 border-neon/30 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Nivel 1: Categorías */}
-        <div>
-          <label className="block text-xs font-mono uppercase text-ice mb-2">
-            1. Categoría:
-          </label>
+      {/* ========================================================= */}
+      {/* SELECTORES Y CONTROLES CRUD EN LOS 3 PRIMEROS NIVELES     */}
+      {/* ========================================================= */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* NIVEL 1: CATEGORÍA */}
+        <div className="cyber-panel rounded-2xl p-5 border-neon/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono font-bold uppercase text-neon-cyan flex items-center gap-1.5">
+              <FolderPlus className="w-4 h-4 text-neon-cyan" />
+              <span>1. Categoría</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => openModal('category', 'create')}
+                className="p-1 rounded bg-neon/10 hover:bg-neon/20 text-neon-cyan text-xs"
+                title="Nueva Categoría"
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
+              {currentCategory && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openModal('category', 'edit', currentCategory)}
+                    className="p-1 rounded bg-navy hover:bg-navy/80 text-ice text-xs"
+                    title="Editar Categoría"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteCategory}
+                    className="p-1 rounded bg-magenta/10 hover:bg-magenta/20 text-magenta text-xs"
+                    title="Eliminar Categoría"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <select
             value={selectedCatId}
             onChange={(e) => setSelectedCatId(e.target.value)}
@@ -238,13 +549,53 @@ export default function AdminCatalogoPage() {
               );
             })}
           </select>
+          {currentCategory && (
+            <p className="text-[10px] font-mono text-ice/60 truncate">
+              Slug: /{currentCategory.slug}
+            </p>
+          )}
         </div>
 
-        {/* Nivel 2: Subcategorías */}
-        <div>
-          <label className="block text-xs font-mono uppercase text-ice mb-2">
-            2. Subcategoría:
-          </label>
+        {/* NIVEL 2: SUBCATEGORÍA */}
+        <div className="cyber-panel rounded-2xl p-5 border-neon/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono font-bold uppercase text-neon-cyan flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-neon-cyan" />
+              <span>2. Subcategoría</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={!selectedCatId}
+                onClick={() => openModal('subcategory', 'create')}
+                className="p-1 rounded bg-neon/10 hover:bg-neon/20 text-neon-cyan text-xs disabled:opacity-40"
+                title="Nueva Subcategoría"
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
+              {currentSubcategory && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openModal('subcategory', 'edit', currentSubcategory)}
+                    className="p-1 rounded bg-navy hover:bg-navy/80 text-ice text-xs"
+                    title="Editar Subcategoría"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSubcategory}
+                    className="p-1 rounded bg-magenta/10 hover:bg-magenta/20 text-magenta text-xs"
+                    title="Eliminar Subcategoría"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <select
             value={selectedSubId}
             onChange={(e) => setSelectedSubId(e.target.value)}
@@ -260,13 +611,53 @@ export default function AdminCatalogoPage() {
               );
             })}
           </select>
+          {currentSubcategory && (
+            <p className="text-[10px] font-mono text-ice/60 truncate">
+              Slug: /{currentSubcategory.slug}
+            </p>
+          )}
         </div>
 
-        {/* Nivel 3: Producto */}
-        <div>
-          <label className="block text-xs font-mono uppercase text-ice mb-2">
-            3. Producto:
-          </label>
+        {/* NIVEL 3: PRODUCTO */}
+        <div className="cyber-panel rounded-2xl p-5 border-neon/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono font-bold uppercase text-neon-cyan flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-neon-cyan" />
+              <span>3. Producto</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={!selectedSubId}
+                onClick={() => openModal('product', 'create')}
+                className="p-1 rounded bg-neon/10 hover:bg-neon/20 text-neon-cyan text-xs disabled:opacity-40"
+                title="Nuevo Producto"
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
+              {currentProduct && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openModal('product', 'edit', currentProduct)}
+                    className="p-1 rounded bg-navy hover:bg-navy/80 text-ice text-xs"
+                    title="Editar Producto"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteProduct}
+                    className="p-1 rounded bg-magenta/10 hover:bg-magenta/20 text-magenta text-xs"
+                    title="Eliminar Producto"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <select
             value={selectedProdId}
             onChange={(e) => setSelectedProdId(e.target.value)}
@@ -282,137 +673,381 @@ export default function AdminCatalogoPage() {
               );
             })}
           </select>
+          {currentProduct && (
+            <p className="text-[10px] font-mono text-ice/60 truncate">
+              Slug: /{currentProduct.slug}
+            </p>
+          )}
         </div>
+
       </div>
 
+      {/* ========================================================= */}
+      {/* NIVEL 4: VARIANTES CON MATRIZ DE PRECIOS & BOTÓN MODAL    */}
+      {/* ========================================================= */}
       {selectedProdId && (
         <div className="space-y-6">
-          {/* Matriz de Precios por Rol para las Variantes */}
+          
           <div className="cyber-panel rounded-2xl p-6 border-neon/30">
-            <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-2 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-gold shadow-[0_0_8px_#FBBF24]" />
-              Matriz de Precios por Rol de Usuario (Variantes del Producto)
-            </h2>
-            <p className="text-xs font-mono text-ice/70 mb-6">
-              Define los precios en dólares (USD) para cada rango de cliente y revendedor.
-            </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-neon/20">
+              <div>
+                <h2 className="text-base font-bold uppercase tracking-wider text-pure flex items-center gap-2">
+                  <Boxes className="w-5 h-5 text-gold" />
+                  <span>Variantes & Matriz de Precios por Rol</span>
+                </h2>
+                <p className="text-xs font-mono text-ice/70 mt-0.5">
+                  Producto: <strong className="text-white">{currentProduct?.nombre}</strong>
+                </p>
+              </div>
 
-            <div className="space-y-6">
-              {variants.map((v) => {
-                const varId = v.id || v.variante_id || '';
-                return (
-                  <div key={varId} className="p-4 rounded-xl bg-navy/60 border border-neon/20">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-                      <div>
-                        <h3 className="font-bold text-pure text-sm">{v.nombre}</h3>
-                        <p className="text-[11px] font-mono text-ice/60">{v.descripcion}</p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={savingPrices === varId}
-                        onClick={() => handleSavePrices(varId)}
-                        className="btn-neon-pill px-4 py-1.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
-                      >
-                        {savingPrices === varId ? 'Guardando...' : 'Guardar Precios'}
-                      </button>
-                    </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* BOTÓN MODAL REQUISITOS DE ENTREGA */}
+                <button
+                  type="button"
+                  onClick={() => setShowReqModal(true)}
+                  className="btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Requisitos de Entrega ({requirements.length})</span>
+                </button>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                      {ALL_ROLES.map((role) => (
-                        <div key={role} className="p-2.5 rounded-lg bg-pitch border border-neon/20">
-                          <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
-                            {role.replace('_', ' ')}:
-                          </label>
-                          <div className="relative">
-                            <span className="absolute left-2 top-1.5 text-gold font-mono text-xs">$</span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingPrices[varId]?.[role] || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditingPrices((prev) => ({
-                                  ...prev,
-                                  [varId]: {
-                                    ...prev[varId],
-                                    [role]: val,
-                                  },
-                                }));
-                              }}
-                              className="w-full pl-5 pr-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-neon"
-                            />
+                {/* BOTÓN NUEVA VARIANTE */}
+                <button
+                  type="button"
+                  onClick={() => openModal('variant', 'create')}
+                  className="btn-neon-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>+ Nueva Variante</span>
+                </button>
+              </div>
+            </div>
+
+            {/* LISTA DE VARIANTES CON PRECIOS */}
+            {variants.length === 0 ? (
+              <div className="p-12 text-center text-xs font-mono text-ice/60">
+                Este producto no tiene variantes registradas. Haz clic en <strong>"+ Nueva Variante"</strong> para agregar el primer paquete.
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {variants.map((v) => {
+                  const varId = v.id || v.variante_id || '';
+                  return (
+                    <div key={varId} className="p-4 rounded-xl bg-navy/60 border border-neon/20 hover:border-neon/40 transition-colors">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-pitch border border-neon/30 flex items-center justify-center text-xs font-black text-neon-cyan">
+                            💎
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-pure text-sm flex items-center gap-2">
+                              <span>{v.nombre}</span>
+                              {v.cantidad_items ? (
+                                <span className="text-[10px] px-2 py-0.2 rounded-full bg-neon/15 text-neon-cyan border border-neon/30">
+                                  {v.cantidad_items} Items
+                                </span>
+                              ) : null}
+                            </h3>
+                            <p className="text-[11px] font-mono text-ice/60">{v.descripcion || 'Sin descripción'}</p>
                           </div>
                         </div>
-                      ))}
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openModal('variant', 'edit', v);
+                              setFormSlug(varId);
+                            }}
+                            className="p-1.5 rounded bg-pitch border border-neon/20 text-ice hover:text-white text-xs"
+                            title="Editar Variante"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVariant(varId)}
+                            className="p-1.5 rounded bg-magenta/15 border border-magenta/30 text-magenta text-xs"
+                            title="Eliminar Variante"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingPrices === varId}
+                            onClick={() => handleSavePrices(varId)}
+                            className="btn-neon-pill px-4 py-1.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center gap-1.5 ml-2"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>{savingPrices === varId ? 'Guardando...' : 'Guardar Precios'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* MATRIZ DE PRECIOS PARA LOS 6 ROLES */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-neon/10">
+                        {ALL_ROLES.map((role) => (
+                          <div key={role} className="p-2.5 rounded-lg bg-pitch border border-neon/20">
+                            <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
+                              {role.replace('_', ' ')}:
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1.5 text-gold font-mono text-xs">$</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editingPrices[varId]?.[role] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditingPrices((prev) => ({
+                                    ...prev,
+                                    [varId]: {
+                                      ...prev[varId],
+                                      [role]: val,
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-5 pr-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-neon"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Requisitos de Entrega para este Producto (UID, Nickname, etc.) */}
-          <div className="cyber-panel rounded-2xl p-6 border-neon/30">
-            <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-2 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-magenta shadow-[0_0_8px_#FF007F]" />
-              Campos y Requisitos Solicitados al Comprador
-            </h2>
-            <p className="text-xs font-mono text-ice/70 mb-4">
-              Estos campos serán solicitados en el checkout al momento de la compra (ej. ID de Jugador).
-            </p>
+        </div>
+      )}
 
-            <div className="flex flex-wrap gap-2 mb-6">
-              {requirements.map((r) => {
-                const reqId = r.id || r.requisito_id;
-                const reqLabel = r.etiqueta || r.campo_nombre;
-                return (
-                  <div
-                    key={reqId}
-                    className="px-3 py-1.5 rounded-xl bg-navy/80 border border-neon/30 flex items-center gap-2 text-xs font-mono"
-                  >
-                    <span className="text-pure font-bold">{reqLabel}</span>
-                    <span className="text-[10px] text-neon uppercase">({r.tipo})</span>
-                    <button
-                      onClick={() => handleDeleteRequirement(reqId)}
-                      className="text-magenta hover:text-white font-bold ml-1"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
+      {/* ========================================================= */}
+      {/* MODAL CRUD PARA CATEGORÍAS / SUBCATEGORÍAS / PRODUCTOS     */}
+      {/* ========================================================= */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 bg-pitch-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md cyber-panel p-6 rounded-2xl border border-neon-cyan/50 shadow-[0_0_30px_rgba(0,210,255,0.25)]">
+            <div className="flex items-center justify-between pb-3 border-b border-neon/20 mb-4">
+              <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <span>
+                  {modalMode === 'create' ? '+ Crear' : '✎ Editar'}{' '}
+                  {activeModal === 'category'
+                    ? 'Categoría'
+                    : activeModal === 'subcategory'
+                    ? 'Subcategoría'
+                    : activeModal === 'product'
+                    ? 'Producto'
+                    : 'Variante'}
+                </span>
+              </h3>
+              <button onClick={closeModal} className="text-ice hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Agregar nuevo requisito */}
-            <div className="flex flex-col sm:flex-row gap-3 items-center max-w-xl">
-              <input
-                type="text"
-                placeholder="Nombre del Campo (Ej: ID de Jugador)"
-                value={newReqField}
-                onChange={(e) => setNewReqField(e.target.value)}
-                className="w-full sm:flex-1 px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
-              />
-              <select
-                value={newReqType}
-                onChange={(e) => setNewReqType(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
-              >
-                <option value="id_jugador">Solo Números (ID Jugador)</option>
-                <option value="nickname">Alfanumérico (Nickname)</option>
-                <option value="correo">Correo Electrónico</option>
-                <option value="personalizado">Texto Libre</option>
-              </select>
+            <form onSubmit={handleModalSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase text-ice mb-1">
+                  Nombre:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formName}
+                  onChange={(e) => {
+                    setFormName(e.target.value);
+                    if (modalMode === 'create') {
+                      setFormSlug(generateSlug(e.target.value));
+                    }
+                  }}
+                  placeholder="Ej: Free Fire - Diamantes"
+                  className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                />
+              </div>
+
+              {activeModal !== 'variant' && (
+                <div>
+                  <label className="block text-xs font-mono uppercase text-ice mb-1">
+                    Slug (URL amigable):
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formSlug}
+                    onChange={(e) => setFormSlug(generateSlug(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                  />
+                </div>
+              )}
+
+              {activeModal === 'variant' && (
+                <div>
+                  <label className="block text-xs font-mono uppercase text-ice mb-1">
+                    Cantidad de Items (Diamantes / Unidades):
+                  </label>
+                  <input
+                    type="number"
+                    value={formQuantity}
+                    onChange={(e) => setFormQuantity(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-mono uppercase text-ice mb-1">
+                  Descripción (Opcional):
+                </label>
+                <textarea
+                  rows={2}
+                  value={formDesc}
+                  onChange={(e) => setFormDesc(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase text-ice mb-1">
+                  Orden de Visualización:
+                </label>
+                <input
+                  type="number"
+                  value={formOrder}
+                  onChange={(e) => setFormOrder(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-neon/20">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 rounded-xl text-xs font-mono uppercase text-ice hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={formSubmitting}
+                  className="btn-neon-pill px-6 py-2 text-xs font-bold uppercase tracking-wider"
+                >
+                  {formSubmitting ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* VENTANA MODAL ESPECIALIZADA: REQUISITOS DE ENTREGA        */}
+      {/* ========================================================= */}
+      {showReqModal && (
+        <div className="fixed inset-0 z-50 bg-pitch-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-xl cyber-panel p-6 rounded-2xl border border-neon-cyan/50 shadow-[0_0_35px_rgba(0,210,255,0.25)] space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-neon/20">
+              <div>
+                <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-neon-cyan" />
+                  <span>Requisitos de Entrega para el Comprador</span>
+                </h3>
+                <p className="text-xs font-mono text-ice/70 mt-0.5">
+                  Campos solicitados al cliente durante el checkout del producto: <strong className="text-white">{currentProduct?.nombre}</strong>
+                </p>
+              </div>
+              <button onClick={() => setShowReqModal(false)} className="text-ice hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* LISTA ACTUAL DE REQUISITOS */}
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-2">
+                Campos Activos Solicitados:
+              </label>
+              {requirements.length === 0 ? (
+                <div className="p-4 rounded-xl bg-pitch border border-neon/20 text-xs font-mono text-ice/60 text-center">
+                  No hay requisitos configurados. Añade uno abajo (ej: ID de Jugador).
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {requirements.map((r) => {
+                    const reqId = r.id || r.requisito_id;
+                    const reqLabel = r.etiqueta || r.campo_nombre;
+                    return (
+                      <div
+                        key={reqId}
+                        className="p-3 rounded-xl bg-pitch border border-neon/20 flex items-center justify-between text-xs font-mono"
+                      >
+                        <div>
+                          <span className="text-pure font-bold">{reqLabel}</span>
+                          <span className="text-[10px] text-neon-cyan uppercase ml-2 px-2 py-0.5 rounded bg-neon/10">
+                            Tipo: {r.tipo}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRequirement(reqId)}
+                          className="text-magenta hover:text-white font-bold p-1 rounded"
+                          title="Eliminar requisito"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* FORMULARIO PARA AÑADIR NUEVO CAMPO */}
+            <div className="p-4 rounded-xl bg-navy/60 border border-neon/20 space-y-3">
+              <span className="text-xs font-mono uppercase text-neon-cyan font-bold block">
+                + Añadir Nuevo Campo Requerido:
+              </span>
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="text"
+                  placeholder="Etiqueta (Ej: ID de Jugador)"
+                  value={newReqField}
+                  onChange={(e) => setNewReqField(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                />
+                <select
+                  value={newReqType}
+                  onChange={(e) => setNewReqType(e.target.value)}
+                  className="px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                >
+                  <option value="id_jugador">Solo Números (ID Jugador)</option>
+                  <option value="nickname">Alfanumérico (Nickname)</option>
+                  <option value="correo">Correo Electrónico</option>
+                  <option value="personalizado">Texto Libre</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddRequirement}
+                  className="btn-neon-pill px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-neon/20">
               <button
                 type="button"
-                onClick={handleAddRequirement}
-                className="w-full sm:w-auto btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+                onClick={() => setShowReqModal(false)}
+                className="btn-ice-pill px-6 py-2 text-xs font-bold uppercase tracking-wider"
               >
-                + Agregar Campo
+                Listo / Cerrar
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
