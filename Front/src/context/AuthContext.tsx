@@ -1,14 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { UserProfile, Notification } from '@/types/database.types';
-import { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
+import type { UserProfile, Notification as DBNotification } from '@/types/database.types';
+import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
-  notifications: Notification[];
+  notifications: DBNotification[];
   unreadCount: number;
   loading: boolean;
   refreshProfile: () => Promise<void>;
@@ -36,10 +36,8 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<DBNotification[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const supabase = createClient();
 
   const fetchProfileAndNotifications = useCallback(async (userId: string) => {
     try {
@@ -51,6 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (prof && !profError) {
         setProfile(prof as UserProfile);
+        try {
+          localStorage.setItem('rm_masha_cached_profile', JSON.stringify(prof));
+        } catch (e) {}
       }
 
       const { data: notifs } = await supabase
@@ -58,15 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('usuario_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(15);
 
       if (notifs) {
-        setNotifications(notifs as Notification[]);
+        setNotifications(notifs as DBNotification[]);
       }
     } catch (err) {
       console.error('Error al cargar perfil o notificaciones:', err);
     }
-  }, [supabase]);
+  }, []);
 
   const refreshProfile = async () => {
     if (user?.id) {
@@ -110,40 +111,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setNotifications([]);
+    try {
+      localStorage.removeItem('rm_masha_cached_profile');
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Error en signOut:', err);
+    } finally {
+      setUser(null);
+      setProfile(null);
+      setNotifications([]);
+    }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchProfileAndNotifications(currentUser.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
+    let isMounted = true;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    // 1. Cargar perfil desde caché para evitar pantallas en blanco o deslogueos al recargar
+    try {
+      const cached = localStorage.getItem('rm_masha_cached_profile');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.id) {
+          setProfile(parsed);
+        }
+      }
+    } catch (e) {}
+
+    // 2. Cargar sesión inicial de Supabase persistente
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
+
       if (currentUser) {
-        fetchProfileAndNotifications(currentUser.id);
+        await fetchProfileAndNotifications(currentUser.id);
       } else {
         setProfile(null);
         setNotifications([]);
+        try {
+          localStorage.removeItem('rm_masha_cached_profile');
+        } catch (e) {}
       }
-      setLoading(false);
+
+      if (isMounted) setLoading(false);
+    });
+
+    // 3. Suscripción a cambios de autenticación
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      if (event === 'SIGNED_OUT' || !currentUser) {
+        setProfile(null);
+        setNotifications([]);
+        try {
+          localStorage.removeItem('rm_masha_cached_profile');
+        } catch (e) {}
+        if (isMounted) setLoading(false);
+      } else if (
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED' ||
+        event === 'INITIAL_SESSION'
+      ) {
+        await fetchProfileAndNotifications(currentUser.id);
+        if (isMounted) setLoading(false);
+      }
     });
 
     return () => {
+      isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [supabase, fetchProfileAndNotifications]);
+  }, [fetchProfileAndNotifications]);
 
+  // Suscripción Realtime para Notificaciones y Cambios de Saldo/Rol
   useEffect(() => {
     if (!user?.id) return;
 
@@ -158,7 +201,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `id=eq.${user.id}`,
         },
         (payload) => {
-          setProfile(payload.new as UserProfile);
+          const updated = payload.new as UserProfile;
+          setProfile(updated);
+          try {
+            localStorage.setItem('rm_masha_cached_profile', JSON.stringify(updated));
+          } catch (e) {}
         }
       )
       .subscribe();
@@ -174,7 +221,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `usuario_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const newNotif = payload.new as DBNotification;
+          setNotifications((prev) => [newNotif, ...prev]);
+
+          // Notificación nativa si el navegador está en segundo plano y tiene permiso
+          try {
+            if (
+              typeof window !== 'undefined' &&
+              'Notification' in window &&
+              Notification.permission === 'granted'
+            ) {
+              new Notification('RM & Masha', {
+                body: newNotif.mensaje,
+                icon: '/images/cyber-winter-hero.jpg',
+              });
+            }
+          } catch (e) {}
         }
       )
       .subscribe();
@@ -183,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(profileChannel);
       supabase.removeChannel(notifChannel);
     };
-  }, [user?.id, supabase]);
+  }, [user?.id]);
 
   const unreadCount = notifications.filter((n) => !n.leido).length;
 

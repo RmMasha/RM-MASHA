@@ -18,12 +18,17 @@ export default function AdminLayout({ children }: Props) {
   const isStaff = profile?.rol === 'admin' || profile?.rol === 'programador';
 
   useEffect(() => {
-    if (!loading && (!user || !isStaff)) {
-      router.push('/login?redirect=' + encodeURIComponent(pathname));
+    // Solo evaluar redirección cuando la sesión y el perfil han terminado de cargarse
+    if (!loading) {
+      if (!user) {
+        router.push('/login?redirect=' + encodeURIComponent(pathname));
+      } else if (profile && !isStaff) {
+        router.push('/?error=unauthorized');
+      }
     }
   }, [user, profile, loading, isStaff, pathname, router]);
 
-  if (loading || !user || !isStaff) {
+  if (loading || (!profile && user) || !isStaff) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center font-mono">
         <div className="cyber-panel p-8 rounded-2xl max-w-md border-neon/40 shadow-neon">
