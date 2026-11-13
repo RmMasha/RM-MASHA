@@ -19,11 +19,10 @@ export function Footer() {
               </div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
                 RM & MASHA
-                <Snowflake className="w-3.5 h-3.5 text-ice animate-spin-slow" />
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Plataforma gamer de recargas directas por ID para Free Fire con temática invernal navideña. Entrega automatizada y soporte en vivo.
+              Plataforma gamer de recargas directas por ID para Free Fire y videojuegos. Entrega automatizada y soporte en vivo.
             </p>
           </div>
 

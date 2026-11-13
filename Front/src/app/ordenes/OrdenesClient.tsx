@@ -98,7 +98,7 @@ export default function OrdenesClient() {
             No tienes pedidos activos
           </h3>
           <p className="text-xs font-mono text-ice/70 mb-6 max-w-md mx-auto">
-            Aún no has realizado ninguna compra en la plataforma. Explora nuestro catálogo y aprovecha los precios de temporada navideña.
+            Aún no has realizado ninguna compra en la plataforma. Explora nuestro catálogo y aprovecha los precios exclusivos para clientes y revendedores.
           </p>
           <Link
             href="/catalogo"

@@ -52,23 +52,17 @@ export function Navbar() {
                   className="w-full h-full object-contain p-1"
                 />
               ) : (
-                <>
-                  <Gem className="w-5 h-5 text-neon-blue group-hover:scale-110 transition-transform" />
-                  <Snowflake className="w-3 h-3 text-ice absolute -top-1 -right-1 animate-spin-slow" />
-                </>
+                <Gem className="w-5 h-5 text-neon-blue group-hover:scale-110 transition-transform" />
               )}
             </div>
-            <div className="flex flex-col">
-              <span className="font-black text-lg sm:text-xl tracking-tight text-white group-hover:text-neon-cyan transition-colors flex items-center gap-1.5">
-                RM & MASHA
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-magenta/20 text-magenta font-mono border border-magenta/40">
-                  XMAS
+              <div className="flex flex-col">
+                <span className="font-black text-lg sm:text-xl tracking-tight text-white group-hover:text-neon-cyan transition-colors flex items-center gap-1.5">
+                  RM & MASHA
                 </span>
-              </span>
-              <span className="text-[10px] uppercase tracking-widest text-ice font-semibold -mt-1">
-                Free Fire • Recargas Navideñas
-              </span>
-            </div>
+                <span className="text-[10px] uppercase tracking-widest text-ice font-semibold -mt-0.5">
+                  Free Fire • Recargas Oficiales
+                </span>
+              </div>
           </Link>
 
           {/* DESKTOP MINIMALIST NAVIGATION */}
@@ -80,11 +74,10 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all ${
-                    isActive
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all ${isActive
                       ? 'bg-neon-blue/15 text-neon-cyan border border-neon-blue/40 shadow-neon-border'
                       : 'text-slate-300 hover:text-white hover:bg-navy-surface/50'
-                  }`}
+                    }`}
                 >
                   {link.label}
                 </Link>
@@ -166,9 +159,8 @@ export function Navbar() {
                           notifications.map((notif) => (
                             <div
                               key={notif.id}
-                              className={`p-3 text-xs transition-colors ${
-                                !notif.leido ? 'bg-neon-blue/5' : 'hover:bg-navy-surface/40'
-                              }`}
+                              className={`p-3 text-xs transition-colors ${!notif.leido ? 'bg-neon-blue/5' : 'hover:bg-navy-surface/40'
+                                }`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <p className={`text-slate-200 ${!notif.leido ? 'font-semibold text-white' : ''}`}>

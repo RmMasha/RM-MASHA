@@ -67,14 +67,14 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-16 md:gap-24 pb-20">
-      {/* 1. SECCIÓN HERO TEMÁTICA NAVIDAD CIBERNÉTICA */}
+      {/* 1. SECCIÓN HERO */}
       <HeroChristmas />
 
       {/* 2. CATÁLOGO PRINCIPAL DE CATEGORÍAS */}
       <section className="container mx-auto px-4 sm:px-6 relative">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-ice/10 border border-ice/30 text-ice text-xs font-mono tracking-widest uppercase mb-3">
-            <span>❄</span> Catálogo Navideño Disponible
+            <span>⚡</span> Catálogo de Servicios Oficiales
           </div>
           <h2 className="text-3xl md:text-4xl font-black text-pure uppercase tracking-wider">
             Selecciona tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon via-ice to-white drop-shadow-[0_0_15px_rgba(0,210,255,0.5)]">Categoría</span>
@@ -184,7 +184,7 @@ export default async function HomePage() {
               <div className="w-10 h-10 rounded-full bg-neon/15 border border-neon/40 flex items-center justify-center text-neon mb-3 text-lg">
                 🎁
               </div>
-              <h4 className="text-base font-bold text-pure mb-1">Promociones Navideñas</h4>
+              <h4 className="text-base font-bold text-pure mb-1">Promociones & Recompensas</h4>
               <p className="text-xs text-ice/70 font-mono leading-relaxed">
                 Bonos especiales en recargas de saldo y sorteos exclusivos en nuestra comunidad de WhatsApp y Telegram.
               </p>
@@ -231,7 +231,7 @@ export default async function HomePage() {
             {
               review_id: '3',
               calificacion: 5,
-              comentario_texto: 'El tema navideño está genial y el soporte por WhatsApp me resolvió una duda sobre el comprobante en segundos.',
+              comentario_texto: 'La plataforma es súper rápida y el soporte por WhatsApp me resolvió una duda sobre el comprobante en segundos.',
               users: { nombre: 'Carlos G.', nickname: 'SniperKing' },
               fecha: '2026-11-11T09:15:00Z',
             },
@@ -276,7 +276,7 @@ export default async function HomePage() {
         <div className="cyber-panel rounded-3xl p-8 md:p-12 text-center relative overflow-hidden border-neon/40 shadow-neon">
           <div className="max-w-2xl mx-auto relative z-10">
             <h2 className="text-2xl md:text-4xl font-black text-pure uppercase tracking-wider mb-4">
-              ¿Listo para dominar las <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon via-ice to-white">Dunas Navideñas</span>?
+              ¿Listo para dominar las <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon via-ice to-white">Partidas de Free Fire</span>?
             </h2>
             <p className="text-sm text-ice/80 font-mono mb-8 max-w-xl mx-auto">
               Crea tu cuenta, recarga tu saldo interno y disfruta de transacciones automatizadas al instante con las mejores tarifas.

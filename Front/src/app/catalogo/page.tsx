@@ -37,12 +37,12 @@ export default async function CatalogoGeneralPage() {
         <span className="text-pure font-bold">Catálogo General</span>
       </nav>
 
-      {/* Cabecera de Página con Temática Navideña */}
+      {/* Cabecera de Página */}
       <div className="cyber-panel rounded-3xl p-6 md:p-10 mb-10 border-neon/30 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-neon/10 rounded-full blur-3xl pointer-events-none" />
         <div className="max-w-2xl relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon/10 border border-neon/30 text-neon text-[11px] font-mono uppercase mb-3">
-            <span>❄</span> Catálogo Oficial RM & Masha
+            <span>🎮</span> Catálogo Oficial RM & Masha
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-pure uppercase tracking-wider">
             Explora Nuestras <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon via-ice to-white">Categorías</span>

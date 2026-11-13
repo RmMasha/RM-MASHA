@@ -174,7 +174,7 @@ export default function BilleteraClient() {
   if (authLoading || (!user && loadingData)) {
     return (
       <div className="container mx-auto px-4 py-20 text-center text-ice font-mono">
-        Cargando Billetera Ciber-Navideña...
+        Cargando Billetera...
       </div>
     );
   }
@@ -231,8 +231,8 @@ export default function BilleteraClient() {
       {message && (
         <div
           className={`p-4 rounded-xl mb-6 text-xs md:text-sm font-mono flex items-center justify-between ${message.type === 'success'
-              ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
-              : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
+            ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
+            : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
             }`}
         >
           <div className="flex items-center gap-2">
@@ -250,8 +250,8 @@ export default function BilleteraClient() {
         <button
           onClick={() => setActiveTab('recargar')}
           className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === 'recargar'
-              ? 'btn-neon-pill font-bold'
-              : 'text-ice/70 hover:text-white hover:bg-navy/60'
+            ? 'btn-neon-pill font-bold'
+            : 'text-ice/70 hover:text-white hover:bg-navy/60'
             }`}
         >
           Recargar Saldo
@@ -259,8 +259,8 @@ export default function BilleteraClient() {
         <button
           onClick={() => setActiveTab('transacciones')}
           className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === 'transacciones'
-              ? 'btn-neon-pill font-bold'
-              : 'text-ice/70 hover:text-white hover:bg-navy/60'
+            ? 'btn-neon-pill font-bold'
+            : 'text-ice/70 hover:text-white hover:bg-navy/60'
             }`}
         >
           Historial de Gastos & Movimientos ({transactions.length})
@@ -268,8 +268,8 @@ export default function BilleteraClient() {
         <button
           onClick={() => setActiveTab('historial_recargas')}
           className={`px-5 py-2.5 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === 'historial_recargas'
-              ? 'btn-neon-pill font-bold'
-              : 'text-ice/70 hover:text-white hover:bg-navy/60'
+            ? 'btn-neon-pill font-bold'
+            : 'text-ice/70 hover:text-white hover:bg-navy/60'
             }`}
         >
           Depósitos Enviados ({recharges.length})
@@ -374,10 +374,10 @@ export default function BilleteraClient() {
                       value={referencia}
                       onChange={(e) => setReferencia(e.target.value)}
                       className={`w-full px-4 py-3 rounded-xl bg-navy/90 border text-pure font-mono text-sm focus:outline-none transition-colors ${referencia.trim().length > 0
-                          ? refCheck.isValid
-                            ? 'border-emerald-500/70 focus:border-emerald-400'
-                            : 'border-magenta/70 focus:border-magenta'
-                          : 'border-neon/30 focus:border-neon'
+                        ? refCheck.isValid
+                          ? 'border-emerald-500/70 focus:border-emerald-400'
+                          : 'border-magenta/70 focus:border-magenta'
+                        : 'border-neon/30 focus:border-neon'
                         }`}
                     />
                     {referencia.trim().length > 0 && (
@@ -447,8 +447,8 @@ export default function BilleteraClient() {
                   type="button"
                   onClick={() => setTxFilter(f.id as any)}
                   className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${txFilter === f.id
-                      ? 'bg-neon text-pitch shadow-[0_0_10px_#00D2FF]'
-                      : 'bg-navy/80 border border-neon/20 text-ice/80 hover:border-neon/50'
+                    ? 'bg-neon text-pitch shadow-[0_0_10px_#00D2FF]'
+                    : 'bg-navy/80 border border-neon/20 text-ice/80 hover:border-neon/50'
                     }`}
                 >
                   <span>{f.label}</span>
@@ -508,10 +508,10 @@ export default function BilleteraClient() {
                           <td className="py-3 px-4">
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${tx.tipo === 'ingreso'
-                                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                                  : tx.tipo === 'descuento_compra'
-                                    ? 'bg-magenta/15 text-magenta border border-magenta/30'
-                                    : 'bg-gold/15 text-gold border border-gold/30'
+                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                : tx.tipo === 'descuento_compra'
+                                  ? 'bg-magenta/15 text-magenta border border-magenta/30'
+                                  : 'bg-gold/15 text-gold border border-gold/30'
                                 }`}
                             >
                               {tx.tipo.replace('_', ' ')}
@@ -520,10 +520,10 @@ export default function BilleteraClient() {
                           <td className="py-3 px-4 text-pure">{tx.descripcion || 'Transacción de billetera'}</td>
                           <td
                             className={`py-3 px-4 text-right font-bold ${tx.tipo === 'ingreso'
-                                ? 'text-emerald-400'
-                                : tx.tipo === 'descuento_compra'
-                                  ? 'text-magenta'
-                                  : 'text-gold'
+                              ? 'text-emerald-400'
+                              : tx.tipo === 'descuento_compra'
+                                ? 'text-magenta'
+                                : 'text-gold'
                               }`}
                           >
                             {isPositive ? '+' : '-'}{formatCurrency(tx.monto)}

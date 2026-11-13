@@ -11,12 +11,12 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'RM & Masha | Recargas de Diamantes Free Fire - Temporada Navideña',
+  title: 'RM & Masha | Recargas de Diamantes Free Fire - Entrega Inmediata',
   description: 'Plataforma oficial de recargas para Free Fire y videojuegos. Precios dinámicos para revendedores, billetera automatizada, entregas rápidas y soporte 24/7.',
   keywords: ['Free Fire', 'Diamantes', 'Recargas', 'Pase Booyah', 'RM & Masha', 'Garena', 'Revendedor'],
   authors: [{ name: 'RM & Masha Gaming Store' }],
   openGraph: {
-    title: 'RM & Masha - Recargas Navideñas Free Fire',
+    title: 'RM & Masha - Recargas Oficiales Free Fire',
     description: 'Recarga diamantes al mejor precio con entrega inmediata y sistema de billetera automatizada.',
     type: 'website',
   },
@@ -30,9 +30,6 @@ export default function RootLayout({
   return (
     <html lang="es" className="dark">
       <body className={`${inter.className} min-h-screen bg-navy text-pure relative antialiased flex flex-col selection:bg-neon/30 selection:text-white`}>
-        {/* Efecto de copos de nieve interactivos */}
-        <Snowfall count={45} />
-
         {/* Proveedor de Estado Global de Autenticación y Apariencia */}
         <AppearanceProvider>
           <AuthProvider>

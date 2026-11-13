@@ -37,7 +37,7 @@ const SAMPLE_DATA: Record<string, string> = {
   total: '$10.50',
   monto: '15.00',
   motivo: 'Comprobante bancario ilegible o duplicado',
-  descripcion: 'Bonificación Navideña Especial',
+  descripcion: 'Bonificación Especial por Fidelidad',
   saldo_actual: '25.00',
 };
 
@@ -134,11 +134,11 @@ export default function AdminNotificacionesPage() {
         prev.map((t) =>
           t.id === selectedId
             ? {
-                ...t,
-                titulo: currentTitulo.trim(),
-                plantilla: currentPlantilla.trim(),
-                activo: currentActivo,
-              }
+              ...t,
+              titulo: currentTitulo.trim(),
+              plantilla: currentPlantilla.trim(),
+              activo: currentActivo,
+            }
             : t
         )
       );
@@ -172,7 +172,7 @@ export default function AdminNotificacionesPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+
         {/* COLUMNA IZQUIERDA: LISTA DE EVENTOS / PLANTILLAS (4 COLS) */}
         <div className="lg:col-span-4 cyber-panel rounded-2xl p-4 border-neon/30 space-y-2">
           <h3 className="text-xs font-mono font-bold uppercase text-ice px-2 py-1 mb-2">
@@ -189,11 +189,10 @@ export default function AdminNotificacionesPage() {
                   <button
                     key={tpl.id}
                     onClick={() => handleSelectTemplate(tpl.id)}
-                    className={`w-full p-3 rounded-xl text-left border transition-all flex items-center justify-between ${
-                      isSelected
+                    className={`w-full p-3 rounded-xl text-left border transition-all flex items-center justify-between ${isSelected
                         ? 'bg-neon/15 border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)] text-white'
                         : 'bg-pitch/60 border-neon/10 hover:border-neon/30 text-ice/70 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -206,9 +205,8 @@ export default function AdminNotificacionesPage() {
                       </span>
                     </div>
                     <span
-                      className={`w-2 h-2 rounded-full ${
-                        tpl.activo ? 'bg-neon-cyan shadow-[0_0_6px_#00f0ff]' : 'bg-slate-600'
-                      }`}
+                      className={`w-2 h-2 rounded-full ${tpl.activo ? 'bg-neon-cyan shadow-[0_0_6px_#00f0ff]' : 'bg-slate-600'
+                        }`}
                     />
                   </button>
                 );
@@ -219,11 +217,11 @@ export default function AdminNotificacionesPage() {
 
         {/* COLUMNA DERECHA: EDITOR Y PREVISUALIZADOR EN VIVO (8 COLS) */}
         <div className="lg:col-span-8 space-y-6">
-          
+
           {/* EDITOR FORMULARIO */}
           <div className="cyber-panel rounded-2xl p-6 border-neon/30">
             <form onSubmit={handleSave} className="space-y-4">
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neon/20">
                 <div>
                   <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-neon/10 text-neon-cyan border border-neon/30">

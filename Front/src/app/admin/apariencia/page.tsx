@@ -137,9 +137,9 @@ export default function AdminAparienciaPage() {
     }
   };
 
-  // Restablecer a los colores navideños de fábrica
+  // Restablecer a los colores de fábrica
   const handleResetFactory = async () => {
-    if (!confirm('¿Deseas restablecer todos los botones y luces a los colores navideños de fábrica?')) return;
+    if (!confirm('¿Deseas restablecer todos los botones y luces a los colores originales de fábrica?')) return;
     setColorNeonPrincipal(DEFAULT_FACTORY_COLORS.color_neon_principal);
     setColorNeonSecundario(DEFAULT_FACTORY_COLORS.color_neon_secundario);
     setColorMagenta(DEFAULT_FACTORY_COLORS.color_magenta);
@@ -470,7 +470,7 @@ export default function AdminAparienciaPage() {
                 }}
                 className="px-6 py-3 rounded-full text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-transform hover:scale-105"
               >
-                <span>Ver Catálogo Navideño</span>
+                <span>Ver Catálogo Completo</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 

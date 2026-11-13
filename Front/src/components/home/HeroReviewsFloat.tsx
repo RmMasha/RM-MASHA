@@ -47,7 +47,7 @@ const FALLBACK_REVIEWS: HeroReviewItem[] = [
   {
     id: 'f5',
     nombre: 'Daniela Torres',
-    nickname: 'Dani_Xmas',
+    nickname: 'Dani_FF',
     avatar_url: null,
   },
 ];

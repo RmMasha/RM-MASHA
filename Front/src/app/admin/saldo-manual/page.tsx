@@ -15,7 +15,7 @@ export default function AdminSaldoManualPage() {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [monto, setMonto] = useState<string>('5.00');
   const [tipo, setTipo] = useState<'ingreso' | 'descuento_compra' | 'reembolso'>('ingreso');
-  const [motivo, setMotivo] = useState<string>('Promoción Navideña');
+  const [motivo, setMotivo] = useState<string>('Bonificación Especial');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -121,11 +121,10 @@ export default function AdminSaldoManualPage() {
 
       {feedback && (
         <div
-          className={`p-4 rounded-xl text-xs font-mono flex items-center justify-between ${
-            feedback.type === 'success'
+          className={`p-4 rounded-xl text-xs font-mono flex items-center justify-between ${feedback.type === 'success'
               ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
               : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             <span>{feedback.type === 'success' ? '✅' : '⚠️'}</span>
@@ -202,7 +201,7 @@ export default function AdminSaldoManualPage() {
               <input
                 type="text"
                 required
-                placeholder="Ej: Bonificación navideña por revendedor top"
+                placeholder="Ej: Bonificación especial por fidelidad o revendedor top"
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
@@ -250,11 +249,10 @@ export default function AdminSaldoManualPage() {
                   <div
                     key={u.id}
                     onClick={() => setSelectedUserId(u.id)}
-                    className={`p-3.5 rounded-xl border text-xs font-mono cursor-pointer transition-all flex items-center justify-between ${
-                      isSelected
+                    className={`p-3.5 rounded-xl border text-xs font-mono cursor-pointer transition-all flex items-center justify-between ${isSelected
                         ? 'border-gold bg-gold/15 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
                         : 'border-neon/15 bg-navy/50 hover:border-ice/40 hover:bg-navy/80'
-                    }`}
+                      }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
