@@ -67,7 +67,7 @@ export default function AdminAparienciaPage() {
     }
   }, [settings]);
 
-  // Subir imagen de Logo a Supabase Storage
+  // Subir imagen de Logo a Supabase Storage y guardar inmediatamente
   const handleUploadLogo = async (file: File) => {
     try {
       setUploadingLogo(true);
@@ -85,6 +85,12 @@ export default function AdminAparienciaPage() {
         .getPublicUrl(path);
 
       setLogoUrl(publicUrl);
+
+      // Guardar y aplicar inmediatamente en la base de datos
+      await updateSettings({ logo_url: publicUrl });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+      alert('¡Logotipo oficial subido y aplicado con éxito en toda la tienda!');
     } catch (err: any) {
       console.error('Error subiendo logo:', err);
       alert('Error al subir logo: ' + err.message);
@@ -93,7 +99,7 @@ export default function AdminAparienciaPage() {
     }
   };
 
-  // Subir imagen de Favicon a Supabase Storage
+  // Subir imagen de Favicon a Supabase Storage y guardar inmediatamente
   const handleUploadFavicon = async (file: File) => {
     try {
       setUploadingFavicon(true);
@@ -111,11 +117,39 @@ export default function AdminAparienciaPage() {
         .getPublicUrl(path);
 
       setFaviconUrl(publicUrl);
+
+      // Guardar y aplicar inmediatamente en la base de datos
+      await updateSettings({ favicon_url: publicUrl });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+      alert('¡Favicon de pestaña del navegador subido y aplicado con éxito!');
     } catch (err: any) {
       console.error('Error subiendo favicon:', err);
       alert('Error al subir favicon: ' + err.message);
     } finally {
       setUploadingFavicon(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    try {
+      setLogoUrl('');
+      await updateSettings({ logo_url: null });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } catch (err: any) {
+      alert('Error al quitar logo: ' + err.message);
+    }
+  };
+
+  const handleRemoveFavicon = async () => {
+    try {
+      setFaviconUrl('');
+      await updateSettings({ favicon_url: null });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } catch (err: any) {
+      alert('Error al quitar favicon: ' + err.message);
     }
   };
 
@@ -179,15 +213,34 @@ export default function AdminAparienciaPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleResetFactory}
-          className="btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Restablecer Fábrica</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleResetFactory}
+            className="btn-ice-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Restablecer Fábrica</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-neon-pill px-5 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-neon"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
+          </button>
+        </div>
       </div>
+
+      {savedSuccess && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-xs font-mono text-emerald-400 flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>¡Configuración y archivos de apariencia guardados y aplicados en vivo en toda la plataforma!</span>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-6">
         
@@ -242,7 +295,7 @@ export default function AdminAparienciaPage() {
                   {logoUrl && (
                     <button
                       type="button"
-                      onClick={() => setLogoUrl('')}
+                      onClick={handleRemoveLogo}
                       className="p-1.5 rounded-lg text-magenta hover:bg-magenta/20 transition-colors"
                       title="Quitar logo y usar icono predeterminado"
                     >
@@ -310,7 +363,7 @@ export default function AdminAparienciaPage() {
                   {faviconUrl && (
                     <button
                       type="button"
-                      onClick={() => setFaviconUrl('')}
+                      onClick={handleRemoveFavicon}
                       className="p-1.5 rounded-lg text-magenta hover:bg-magenta/20 transition-colors"
                       title="Quitar favicon"
                     >
