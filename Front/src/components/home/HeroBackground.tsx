@@ -1,53 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-
-interface Snowflake {
-  id: number;
-  left: string;
-  size: number;
-  duration: string;
-  delay: string;
-  drift: number;
-  opacity: number;
-}
+import React from 'react';
 
 interface HeroBackgroundProps {
   children?: React.ReactNode;
   className?: string;
-  snowCount?: number;
 }
 
 export function HeroBackground({
   children,
   className = '',
-  snowCount = 38,
 }: HeroBackgroundProps) {
-  const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
-
-  // Inicialización de partículas en cliente para evitar mismatch de hidratación SSR
-  useEffect(() => {
-    const items: Snowflake[] = [];
-    for (let i = 0; i < snowCount; i++) {
-      items.push({
-        id: i,
-        left: `${(i * (100 / snowCount) + (Math.random() * 4 - 2)).toFixed(2)}%`,
-        size: Math.floor(Math.random() * 4) + 2, // 2px a 5px
-        duration: `${(Math.random() * 7 + 8).toFixed(1)}s`, // 8s a 15s (caída suave y constante)
-        delay: `${(Math.random() * 8).toFixed(1)}s`,
-        drift: Math.floor(Math.random() * 36) - 18, // -18px a +18px de deriva
-        opacity: Number((Math.random() * 0.55 + 0.35).toFixed(2)), // 0.35 a 0.90
-      });
-    }
-    setSnowflakes(items);
-  }, [snowCount]);
-
   return (
     <section
       className={`relative w-full min-h-screen overflow-hidden bg-slate-950 flex flex-col justify-between ${className}`}
     >
       {/* ========================================================= */}
-      {/* 1. IMAGEN DE FONDO CINEMÁTICA 16:9 (SIN PERSONAJES / SIN CUADRÍCULAS) */}
+      {/* 1. IMAGEN DE FONDO CINEMÁTICA 16:9                        */}
       {/* ========================================================= */}
       <div
         className="absolute inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat opacity-65 scale-105"
@@ -62,95 +31,118 @@ export function HeroBackground({
       />
 
       {/* ========================================================= */}
-      {/* 2. RELÁMPAGOS Y RAYOS DE LUZ AZUL ELÉCTRICO (#00f0ff)     */}
+      {/* 2. RELÁMPAGOS, RAYOS Y TORMENTA ELÉCTRICA (POTENCIADOS EN MÓVIL) */}
       {/* ========================================================= */}
 
-      {/* Resplandor ambiental de tormenta eléctrica esporádica (Blur masivo) */}
+      {/* PANTALLAZO DE ILUMINACIÓN DE TORMENTA AMBIENTAL (THUNDER SKY FLASH) */}
       <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 w-[850px] h-[450px] rounded-full pointer-events-none z-0 bg-[#00f0ff]/15 blur-[120px] animate-ambient-flash"
+        className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_50%_18%,_rgba(255,255,255,0.45)_0%,_rgba(0,210,255,0.4)_42%,_transparent_85%)] animate-storm-sky"
         aria-hidden="true"
       />
 
-      {/* Rayo 1: Haz cortante diagonal (Top-Left hacia Bottom-Right) */}
+      {/* RAYO PRINCIPAL DENTADO CON RAMIFICACIONES (CENTRO / IMPACTO DIRECTO EN MÓVIL) */}
       <div
-        className="absolute top-1/4 -left-1/4 w-[150%] h-[2.5px] pointer-events-none z-0 animate-lightning-1"
-        style={{
-          background:
-            'linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.2) 20%, #00f0ff 50%, rgba(0, 240, 255, 0.2) 80%, transparent 100%)',
-          filter: 'blur(3px) drop-shadow(0 0 14px #00f0ff)',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Rayo 1 (Capa Difusa con Blur pronunciado) */}
-      <div
-        className="absolute top-1/4 -left-1/4 w-[150%] h-[18px] pointer-events-none z-0 animate-lightning-1"
-        style={{
-          background:
-            'linear-gradient(90deg, transparent 5%, rgba(0, 240, 255, 0.4) 40%, #00f0ff 50%, rgba(0, 240, 255, 0.4) 60%, transparent 95%)',
-          filter: 'blur(22px)',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Rayo 2: Haz cruzado secundario esporádico (Top-Right hacia Bottom-Left) */}
-      <div
-        className="absolute top-1/3 -right-1/4 w-[140%] h-[2px] pointer-events-none z-0 animate-lightning-2"
-        style={{
-          background:
-            'linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.3) 30%, #00f0ff 50%, rgba(0, 240, 255, 0.3) 70%, transparent 100%)',
-          filter: 'blur(4px) drop-shadow(0 0 12px #00f0ff)',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Rayo 2 (Capa de resplandor suave con Blur) */}
-      <div
-        className="absolute top-1/3 -right-1/4 w-[140%] h-[14px] pointer-events-none z-0 animate-lightning-2"
-        style={{
-          background:
-            'linear-gradient(90deg, transparent 10%, rgba(0, 240, 255, 0.25) 50%, transparent 90%)',
-          filter: 'blur(28px)',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* ========================================================= */}
-      {/* 3. SISTEMA DE PARTÍCULAS: COPOS DE NIEVE CAYENDO SUAVEMENTE */}
-      {/* ========================================================= */}
-      <div
-        className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
+        className="absolute top-2 left-1/2 -translate-x-1/2 w-80 sm:w-[520px] h-[390px] pointer-events-none z-0 animate-storm-bolt-main select-none"
         aria-hidden="true"
       >
-        {snowflakes.map((flake) => (
-          <span
-            key={flake.id}
-            className="absolute rounded-full pointer-events-none"
-            style={{
-              left: flake.left,
-              top: '-15px',
-              width: `${flake.size}px`,
-              height: `${flake.size}px`,
-              backgroundColor: '#FFFFFF',
-              boxShadow: '0 0 6px 1px rgba(255, 255, 255, 0.95), 0 0 12px 2px rgba(0, 240, 255, 0.7)',
-              opacity: flake.opacity,
-              animation: `snowfallMotion ${flake.duration} linear infinite`,
-              animationDelay: flake.delay,
-              transform: `translateX(${flake.drift}px)`,
-            }}
+        <svg
+          viewBox="0 0 500 480"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full overflow-visible"
+        >
+          {/* Capa 1: Resplandor difuso cian eléctrico */}
+          <path
+            d="M 250 0 L 225 90 L 275 125 L 195 230 L 235 255 L 175 365 L 210 390 L 140 480 M 195 230 L 125 285 L 155 300 L 95 380 M 235 255 L 305 310 L 280 340 L 340 410 M 225 90 L 165 145 L 190 160 L 135 220"
+            stroke="#00D2FF"
+            strokeWidth="9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="blur-md opacity-90"
           />
-        ))}
+
+          {/* Capa 2: Haz de luz celeste hielo */}
+          <path
+            d="M 250 0 L 225 90 L 275 125 L 195 230 L 235 255 L 175 365 L 210 390 L 140 480 M 195 230 L 125 285 L 155 300 L 95 380 M 235 255 L 305 310 L 280 340 L 340 410 M 225 90 L 165 145 L 190 160 L 135 220"
+            stroke="#7DD3FC"
+            strokeWidth="4.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="blur-xs opacity-95"
+          />
+
+          {/* Capa 3: Núcleo de plasma blanco puro intenso */}
+          <path
+            d="M 250 0 L 225 90 L 275 125 L 195 230 L 235 255 L 175 365 L 210 390 L 140 480 M 195 230 L 125 285 L 155 300 L 95 380 M 235 255 L 305 310 L 280 340 L 340 410 M 225 90 L 165 145 L 190 160 L 135 220"
+            stroke="#FFFFFF"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
 
+      {/* RAYO SECUNDARIO CRUZADO (DESCARGA DIAGONAL DERECHA A IZQUIERDA) */}
+      <div
+        className="absolute top-0 right-0 w-72 sm:w-[460px] h-[340px] pointer-events-none z-0 animate-storm-bolt-fork select-none"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 460 340"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full overflow-visible"
+        >
+          {/* Resplandor Neón */}
+          <path
+            d="M 400 0 L 330 85 L 365 110 L 270 200 L 305 220 L 210 310 M 270 200 L 205 250 L 230 265 L 170 330"
+            stroke="#00D2FF"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="blur-md opacity-85"
+          />
+          {/* Núcleo Blanco Puro */}
+          <path
+            d="M 400 0 L 330 85 L 365 110 L 270 200 L 305 220 L 210 310 M 270 200 L 205 250 L 230 265 L 170 330"
+            stroke="#FFFFFF"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      {/* Haces cortantes de energía láser azul eléctrico */}
+      <div
+        className="absolute top-1/4 -left-1/4 w-[150%] h-[3.5px] pointer-events-none z-0 animate-lightning-1"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.4) 20%, #ffffff 50%, rgba(0, 240, 255, 0.4) 80%, transparent 100%)',
+          filter: 'blur(2px) drop-shadow(0 0 16px #00f0ff)',
+        }}
+        aria-hidden="true"
+      />
+
+      <div
+        className="absolute top-1/3 -right-1/4 w-[140%] h-[3px] pointer-events-none z-0 animate-lightning-2"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.5) 30%, #ffffff 50%, rgba(0, 240, 255, 0.5) 70%, transparent 100%)',
+          filter: 'blur(2.5px) drop-shadow(0 0 14px #00f0ff)',
+        }}
+        aria-hidden="true"
+      />
+
       {/* ========================================================= */}
-      {/* 4. CONTENIDO WRAPPER (UI DE RECARGAS / HIJOS)            */}
+      {/* 3. CONTENIDO WRAPPER (UI DE RECARGAS / HIJOS)            */}
       {/* ========================================================= */}
       <div className="relative z-10 w-full flex-1 flex flex-col">
         {children}
       </div>
 
       {/* ========================================================= */}
-      {/* 5. PARTE INFERIOR: DUNAS DE NIEVE SUPERPUESTAS (SVG)     */}
+      {/* 4. PARTE INFERIOR: DUNAS DE NIEVE SUPERPUESTAS (SVG)     */}
       {/* ========================================================= */}
       <div className="relative w-full z-10 pointer-events-none select-none -mt-12 sm:-mt-16 md:-mt-24">
         <svg
@@ -185,26 +177,6 @@ export function HeroBackground({
           />
         </svg>
       </div>
-
-      {/* Animación suave de caída y deriva de nieve */}
-      <style jsx>{`
-        @keyframes snowfallMotion {
-          0% {
-            transform: translateY(-10px) translateX(0);
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.8;
-          }
-          90% {
-            opacity: 0.8;
-          }
-          100% {
-            transform: translateY(105vh) translateX(20px);
-            opacity: 0;
-          }
-        }
-      `}</style>
     </section>
   );
 }

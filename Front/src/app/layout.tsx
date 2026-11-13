@@ -33,6 +33,9 @@ export default function RootLayout({
         {/* Proveedor de Estado Global de Autenticación y Apariencia */}
         <AppearanceProvider>
           <AuthProvider>
+            {/* Atmósfera global de copos de nieve y partículas luminosas por toda la página */}
+            <Snowfall count={54} />
+
             <div className="relative z-10 flex flex-col min-h-screen">
               {/* Barra de Navegación Minimalista Superior */}
               <Navbar />
