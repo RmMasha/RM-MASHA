@@ -26,6 +26,7 @@ export interface UserProfile {
   avatar_url?: string | null;
   saldo_actual: number;
   rol: UserRole;
+  terminos_aceptados_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -221,10 +222,27 @@ export interface AppearanceSettings {
   id: string;
   logo_url?: string | null;
   favicon_url?: string | null;
+  site_name?: string | null;
+  site_subtitle?: string | null;
+  hero_title?: string | null;
+  hero_subtitle?: string | null;
+  hero_description?: string | null;
   color_neon_principal: string;
   color_neon_secundario: string;
   color_magenta: string;
   color_ice: string;
   color_gold: string;
+  updated_at?: string;
+}
+
+export interface SocialLink {
+  id: string;
+  nombre: string;
+  url: string;
+  icono_url?: string | null;
+  icono_nombre?: string | null;
+  activo: boolean;
+  orden: number;
+  created_at?: string;
   updated_at?: string;
 }

@@ -21,6 +21,7 @@ export default function RegistroClient() {
   const [edad, setEdad] = useState('');
   const [pais, setPais] = useState('Venezuela');
   const [codigoReferido, setCodigoReferido] = useState(urlRefCode);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -42,6 +43,14 @@ export default function RegistroClient() {
       return;
     }
 
+    if (!aceptaTerminos) {
+      setErrorMsg('Debes aceptar los Términos y Condiciones y la Política de Privacidad para continuar.');
+      setLoading(false);
+      return;
+    }
+
+    const fechaAceptacion = new Date().toISOString();
+
     const { error } = await signUp(email, password, {
       nombre: nombre.trim(),
       whatsapp: whatsapp.trim(),
@@ -49,6 +58,7 @@ export default function RegistroClient() {
       edad: edad ? parseInt(edad) : null,
       pais: pais.trim() || null,
       codigo_referido: codigoReferido.trim() || null,
+      terminos_aceptados_at: fechaAceptacion,
     });
 
     if (error) {
@@ -197,6 +207,37 @@ export default function RegistroClient() {
                 className="w-full px-4 py-2.5 rounded-xl bg-navy/90 border border-neon/30 text-pure placeholder-ice/40 text-xs font-mono focus:outline-none focus:border-neon transition-all"
               />
             </div>
+          </div>
+
+          <div className="pt-1">
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-navy/80 border border-neon/25 cursor-pointer hover:border-neon transition-colors select-none">
+              <input
+                type="checkbox"
+                required
+                checked={aceptaTerminos}
+                onChange={(e) => setAceptaTerminos(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-neon/40 bg-pitch text-neon focus:ring-neon accent-[#00D2FF] cursor-pointer shrink-0"
+              />
+              <span className="text-[11px] font-mono text-ice/90 leading-relaxed">
+                He leído y acepto los{' '}
+                <Link
+                  href="/terminos"
+                  target="_blank"
+                  className="text-neon hover:text-white underline font-bold"
+                >
+                  Términos y Condiciones
+                </Link>{' '}
+                y la{' '}
+                <Link
+                  href="/privacidad"
+                  target="_blank"
+                  className="text-neon hover:text-white underline font-bold"
+                >
+                  Política de Privacidad
+                </Link>
+                . Se registrará la fecha y hora exacta de aceptación como respaldo de consentimiento.
+              </span>
+            </label>
           </div>
 
           <button

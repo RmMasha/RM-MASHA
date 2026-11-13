@@ -42,12 +42,14 @@ export default function AdminLayout({ children }: Props) {
   }
 
   const navLinks = [
+    { href: '/admin/usuarios', label: 'Gestor de Usuarios', icon: '👥' },
     { href: '/admin/pedidos', label: 'Gestor de Pedidos', icon: '📦' },
     { href: '/admin/recargas', label: 'Solicitudes de Recarga', icon: '💳' },
     { href: '/admin/saldo-manual', label: 'Ajuste Manual de Saldo', icon: '⚡' },
     { href: '/admin/catalogo', label: 'Catálogo & Precios por Rol', icon: '💎' },
     { href: '/admin/metodos-pago', label: 'Métodos de Pago', icon: '🏦' },
     { href: '/admin/comentarios', label: 'Referencias del Hero & Reseñas', icon: '🌟' },
+    { href: '/admin/redes', label: 'Redes Sociales', icon: '🌐' },
     { href: '/admin/notificaciones', label: 'Plantillas de Notificaciones', icon: '🔔' },
     { href: '/admin/apariencia', label: 'Apariencia & Marca', icon: '🎨' },
   ];

@@ -34,6 +34,11 @@ export default function AdminAparienciaPage() {
   // Estados locales para el formulario
   const [logoUrl, setLogoUrl] = useState('');
   const [faviconUrl, setFaviconUrl] = useState('');
+  const [siteName, setSiteName] = useState('RM & MASHA');
+  const [siteSubtitle, setSiteSubtitle] = useState('Free Fire • Recargas Oficiales');
+  const [heroTitle, setHeroTitle] = useState('FREE FIRE');
+  const [heroSubtitle, setHeroSubtitle] = useState('Recargas al Instante con Entrega Inmediata');
+  const [heroDescription, setHeroDescription] = useState('Diamantes oficiales garantizados, Pases Booyah y Membresías por tu ID de Jugador. Compra segura con acreditación automatizada en < 2 minutos o paga al instante con tu Saldo Wallet.');
   const [colorNeonPrincipal, setColorNeonPrincipal] = useState('#00D2FF');
   const [colorNeonSecundario, setColorNeonSecundario] = useState('#0070F3');
   const [colorMagenta, setColorMagenta] = useState('#FF007F');
@@ -49,6 +54,11 @@ export default function AdminAparienciaPage() {
     if (settings) {
       setLogoUrl(settings.logo_url || '');
       setFaviconUrl(settings.favicon_url || '');
+      setSiteName(settings.site_name || 'RM & MASHA');
+      setSiteSubtitle(settings.site_subtitle || 'Free Fire • Recargas Oficiales');
+      setHeroTitle(settings.hero_title || 'FREE FIRE');
+      setHeroSubtitle(settings.hero_subtitle || 'Recargas al Instante con Entrega Inmediata');
+      setHeroDescription(settings.hero_description || 'Diamantes oficiales garantizados, Pases Booyah y Membresías por tu ID de Jugador. Compra segura con acreditación automatizada en < 2 minutos o paga al instante con tu Saldo Wallet.');
       setColorNeonPrincipal(settings.color_neon_principal || '#00D2FF');
       setColorNeonSecundario(settings.color_neon_secundario || '#0070F3');
       setColorMagenta(settings.color_magenta || '#FF007F');
@@ -119,6 +129,11 @@ export default function AdminAparienciaPage() {
       await updateSettings({
         logo_url: logoUrl.trim() || null,
         favicon_url: faviconUrl.trim() || null,
+        site_name: siteName.trim() || 'RM & MASHA',
+        site_subtitle: siteSubtitle.trim() || 'Free Fire • Recargas Oficiales',
+        hero_title: heroTitle.trim(),
+        hero_subtitle: heroSubtitle.trim(),
+        hero_description: heroDescription.trim(),
         color_neon_principal: colorNeonPrincipal,
         color_neon_secundario: colorNeonSecundario,
         color_magenta: colorMagenta,
@@ -320,6 +335,106 @@ export default function AdminAparienciaPage() {
             </div>
           </div>
 
+        </div>
+
+        {/* ========================================================================= */}
+        {/* SECCIÓN 1.5: IDENTIDAD DE MARCA & TEXTOS DINÁMICOS DEL HERO               */}
+        {/* ========================================================================= */}
+        <div className="cyber-panel rounded-2xl p-6 border-neon/30 space-y-6">
+          <div className="pb-3 border-b border-neon/20">
+            <h2 className="text-base font-bold uppercase tracking-wider text-pure flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-neon-cyan" />
+              <span>Identidad de Marca & Textos del Hero</span>
+            </h2>
+            <p className="text-xs text-ice/70 font-mono mt-1">
+              Personaliza el nombre de la tienda, subtítulo del logo y los textos publicitarios de la cabecera (Hero) de la página principal.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Nombre de la Tienda (Junto al Logo) <span className="text-magenta">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={siteName}
+                onChange={(e) => setSiteName(e.target.value)}
+                placeholder="Ej: RM & MASHA"
+                className="w-full px-4 py-2.5 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+              />
+              <span className="text-[10px] text-ice/50 font-mono mt-1 block">
+                Se muestra en la barra superior (Navbar) y pie de página.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Subtítulo de la Tienda (Debajo del Nombre)
+              </label>
+              <input
+                type="text"
+                value={siteSubtitle}
+                onChange={(e) => setSiteSubtitle(e.target.value)}
+                placeholder="Ej: Free Fire • Recargas Oficiales"
+                className="w-full px-4 py-2.5 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+              />
+              <span className="text-[10px] text-ice/50 font-mono mt-1 block">
+                Texto en mayúsculas pequeñas debajo del nombre en el Navbar.
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-neon/15">
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Título Principal del Hero (Grande)
+              </label>
+              <input
+                type="text"
+                value={heroTitle}
+                onChange={(e) => setHeroTitle(e.target.value)}
+                placeholder="Ej: FREE FIRE"
+                className="w-full px-4 py-2.5 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+              />
+              <span className="text-[10px] text-ice/50 font-mono mt-1 block">
+                Texto de impacto 3D con resplandor neón en la cabecera.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Subtítulo del Hero (Destacado)
+              </label>
+              <input
+                type="text"
+                value={heroSubtitle}
+                onChange={(e) => setHeroSubtitle(e.target.value)}
+                placeholder="Ej: Recargas al Instante con Entrega Inmediata"
+                className="w-full px-4 py-2.5 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+              />
+              <span className="text-[10px] text-ice/50 font-mono mt-1 block">
+                Subtítulo en degradado cian a magenta.
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono uppercase text-ice mb-1">
+              Descripción del Hero (Párrafo explicativo)
+            </label>
+            <textarea
+              rows={3}
+              value={heroDescription}
+              onChange={(e) => setHeroDescription(e.target.value)}
+              placeholder="Escribe la descripción para los visitantes..."
+              className="w-full px-4 py-2.5 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+            />
+            <span className="text-[10px] text-ice/50 font-mono mt-1 block">
+              Explica los beneficios, métodos de acreditación o garantías del servicio.
+            </span>
+          </div>
         </div>
 
         {/* ========================================================================= */}

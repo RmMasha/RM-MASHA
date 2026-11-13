@@ -55,14 +55,14 @@ export function Navbar() {
                 <Gem className="w-5 h-5 text-neon-blue group-hover:scale-110 transition-transform" />
               )}
             </div>
-              <div className="flex flex-col">
-                <span className="font-black text-lg sm:text-xl tracking-tight text-white group-hover:text-neon-cyan transition-colors flex items-center gap-1.5">
-                  RM & MASHA
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-ice font-semibold -mt-0.5">
-                  Free Fire • Recargas Oficiales
-                </span>
-              </div>
+            <div className="flex flex-col">
+              <span className="font-black text-lg sm:text-xl tracking-tight text-white group-hover:text-neon-cyan transition-colors flex items-center gap-1.5">
+                {settings.site_name || 'RM & MASHA'}
+              </span>
+              <span className="text-[10px] uppercase tracking-widest text-ice font-semibold -mt-0.5">
+                {settings.site_subtitle || 'Free Fire • Recargas Oficiales'}
+              </span>
+            </div>
           </Link>
 
           {/* DESKTOP MINIMALIST NAVIGATION */}
@@ -75,8 +75,8 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all ${isActive
-                      ? 'bg-neon-blue/15 text-neon-cyan border border-neon-blue/40 shadow-neon-border'
-                      : 'text-slate-300 hover:text-white hover:bg-navy-surface/50'
+                    ? 'bg-neon-blue/15 text-neon-cyan border border-neon-blue/40 shadow-neon-border'
+                    : 'text-slate-300 hover:text-white hover:bg-navy-surface/50'
                     }`}
                 >
                   {link.label}

@@ -193,8 +193,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 4. RESEÑAS Y TESTIMONIOS DE LA COMUNIDAD */}
-      <section className="container mx-auto px-4 sm:px-6">
+      {/* 4. RESEÑAS Y TESTIMONIOS DE LA COMUNIDAD (REALES) */}
+      <section id="comentarios" className="container mx-auto px-4 sm:px-6 scroll-mt-24">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8">
           <div>
             <span className="text-xs font-mono uppercase text-neon tracking-widest">
@@ -212,63 +212,63 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {(reviews.length > 0 ? reviews : [
-            {
-              review_id: '1',
-              calificacion: 5,
-              comentario_texto: 'Increíble velocidad de entrega. Pagué con el saldo de mi billetera y los diamantes llegaron en 3 minutos a mi ID de Free Fire.',
-              users: { nombre: 'Alexander R.', nickname: 'GhostFF' },
-              fecha: '2026-11-10T12:00:00Z',
-            },
-            {
-              review_id: '2',
-              calificacion: 5,
-              comentario_texto: 'Como revendedor los precios son insuperables. Tengo a mis clientes contentos y el panel de órdenes es súper claro.',
-              users: { nombre: 'Valeria M.', nickname: 'ValStore' },
-              fecha: '2026-11-10T15:30:00Z',
-            },
-            {
-              review_id: '3',
-              calificacion: 5,
-              comentario_texto: 'La plataforma es súper rápida y el soporte por WhatsApp me resolvió una duda sobre el comprobante en segundos.',
-              users: { nombre: 'Carlos G.', nickname: 'SniperKing' },
-              fecha: '2026-11-11T09:15:00Z',
-            },
-          ]).map((r: any) => (
-            <div
-              key={r.id || r.review_id}
-              className="cyber-panel rounded-2xl p-6 flex flex-col justify-between hover:border-ice/50 transition-colors"
-            >
-              <div>
-                <div className="flex items-center gap-1 text-gold mb-3">
-                  {Array.from({ length: r.calificacion || 5 }).map((_, i) => (
-                    <span key={i} className="text-sm">★</span>
-                  ))}
-                </div>
-                <p className="text-xs sm:text-sm text-pure/90 font-mono leading-relaxed mb-4 italic">
-                  "{r.comentario_texto}"
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-3 border-t border-neon/15">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-neon to-magenta flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                  {r.users?.nombre?.charAt(0) || 'U'}
-                </div>
+        {reviews.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {reviews.map((r: any) => (
+              <div
+                key={r.id || r.review_id}
+                className="cyber-panel rounded-2xl p-6 flex flex-col justify-between hover:border-ice/50 transition-colors"
+              >
                 <div>
-                  <div className="text-xs font-bold text-pure">
-                    {r.users?.nombre || 'Gamer Verificado'}
+                  <div className="flex items-center gap-1 text-gold mb-3">
+                    {Array.from({ length: r.calificacion || 5 }).map((_, i) => (
+                      <span key={i} className="text-sm">★</span>
+                    ))}
                   </div>
-                  {r.users?.nickname && (
-                    <div className="text-[10px] font-mono text-neon">
-                      ID: @{r.users.nickname}
+                  <p className="text-xs sm:text-sm text-pure/90 font-mono leading-relaxed mb-4 italic">
+                    "{r.comentario_texto}"
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 pt-3 border-t border-neon/15">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-neon to-magenta flex items-center justify-center text-xs font-bold text-white shadow-sm overflow-hidden">
+                    {r.users?.avatar_url ? (
+                      <img src={r.users.avatar_url} alt={r.users?.nombre} className="w-full h-full object-cover" />
+                    ) : (
+                      r.users?.nombre?.charAt(0) || 'U'
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-pure">
+                      {r.users?.nombre || 'Gamer Verificado'}
                     </div>
-                  )}
+                    {r.users?.nickname && (
+                      <div className="text-[10px] font-mono text-neon">
+                        ID: @{r.users.nickname}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+        ) : (
+          <div className="cyber-panel rounded-2xl p-8 text-center max-w-xl mx-auto border-neon/20">
+            <div className="w-12 h-12 rounded-full bg-neon/10 border border-neon/30 flex items-center justify-center text-neon mx-auto mb-3 text-xl">
+              ⭐
             </div>
-          ))}
-        </div>
+            <h3 className="text-base font-bold text-pure mb-1">Aún no hay reseñas registradas</h3>
+            <p className="text-xs text-ice/70 font-mono mb-5">
+              Sé el primero en dejar tu reseña verificada de la comunidad tras recargar en la tienda.
+            </p>
+            <Link
+              href="/catalogo"
+              className="btn-neon-pill px-6 py-2.5 text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2"
+            >
+              Explorar Catálogo
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* 5. BANNER FINAL CTA */}
