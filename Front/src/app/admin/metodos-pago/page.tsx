@@ -300,9 +300,8 @@ export default function AdminMetodosPagoPage() {
               <button
                 type="submit"
                 disabled={submitting || uploadingLogo}
-                className={`w-full py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 ${
-                  editingId ? 'btn-gold-pill' : 'btn-neon-pill'
-                }`}
+                className={`w-full py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 ${editingId ? 'btn-gold-pill' : 'btn-neon-pill'
+                  }`}
               >
                 {submitting
                   ? 'Guardando...'
@@ -333,11 +332,10 @@ export default function AdminMetodosPagoPage() {
                 return (
                   <div
                     key={methodId}
-                    className={`p-4 rounded-xl bg-navy/60 border transition-all ${
-                      isCurrentEditing
+                    className={`p-4 rounded-xl bg-navy/60 border transition-all ${isCurrentEditing
                         ? 'border-gold shadow-[0_0_15px_rgba(251,191,36,0.25)]'
                         : 'border-neon/20 hover:border-neon/40'
-                    } flex flex-col sm:flex-row sm:items-center justify-between gap-3`}
+                      } flex flex-col sm:flex-row sm:items-center justify-between gap-3`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {m.logo_url ? (
@@ -362,11 +360,10 @@ export default function AdminMetodosPagoPage() {
 
                     <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end shrink-0">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold ${
-                          m.activo
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold ${m.activo
                             ? 'bg-neon/15 text-neon border border-neon/30'
                             : 'bg-magenta/15 text-magenta border border-magenta/30'
-                        }`}
+                          }`}
                       >
                         {m.activo ? 'Activo' : 'Inactivo'}
                       </span>
@@ -383,11 +380,10 @@ export default function AdminMetodosPagoPage() {
                       <button
                         type="button"
                         onClick={() => handleStartEdit(m)}
-                        className={`p-1.5 rounded-lg border text-xs transition-colors ${
-                          isCurrentEditing
+                        className={`p-1.5 rounded-lg border text-xs transition-colors ${isCurrentEditing
                             ? 'bg-gold/20 text-gold border-gold'
                             : 'bg-pitch border-neon/30 text-ice hover:text-white hover:border-neon'
-                        }`}
+                          }`}
                         title="Editar método de pago"
                       >
                         <Edit2 className="w-3.5 h-3.5" />

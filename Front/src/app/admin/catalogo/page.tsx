@@ -80,6 +80,8 @@ export default function AdminCatalogoPage() {
     programador: '0.80',
   });
   const [formBasePrice, setFormBasePrice] = useState('1.00');
+  const [formActivo, setFormActivo] = useState(true);
+  const [formEnablePrices, setFormEnablePrices] = useState(false);
 
   // Subir imagen (PNG, JPG, WEBP, SVG) a Supabase Storage bucket 'catalogo'
   const handleImageFileUpload = async (file: File) => {
@@ -302,6 +304,7 @@ export default function AdminCatalogoPage() {
     setModalMode(mode);
 
     if (level === 'variant') {
+      setFormEnablePrices(true);
       if (mode === 'edit' && existingItem) {
         const varId = existingItem.id || existingItem.variante_id || '';
         setFormName(existingItem.nombre || '');
@@ -310,6 +313,7 @@ export default function AdminCatalogoPage() {
         setFormQuantity(existingItem.cantidad_items ? String(existingItem.cantidad_items) : '0');
         setFormOrder(existingItem.orden ? String(existingItem.orden) : '0');
         setFormImageUrl('');
+        setFormActivo(existingItem.activo !== false);
 
         const loadedPrices: Record<UserRole, string> = {
           cliente: '0.00',
@@ -337,6 +341,7 @@ export default function AdminCatalogoPage() {
         setFormQuantity('0');
         setFormOrder('0');
         setFormImageUrl('');
+        setFormActivo(true);
         setFormVariantPrices({
           cliente: '1.00',
           cliente_especial: '0.95',
@@ -357,13 +362,49 @@ export default function AdminCatalogoPage() {
       setFormQuantity(existingItem.cantidad_items ? String(existingItem.cantidad_items) : '0');
       setFormOrder(existingItem.orden ? String(existingItem.orden) : '0');
       setFormImageUrl(existingItem.imagen_url || '');
+      setFormActivo(existingItem.activo !== false);
+
+      // Si es producto y tiene variantes con precios, precargar
+      if (level === 'product' && variants.length > 0) {
+        const vId = variants[0].id || variants[0].variante_id || '';
+        const loadedPrices: Record<UserRole, string> = {
+          cliente: '0.00',
+          cliente_especial: '0.00',
+          revendedor: '0.00',
+          revendedor_especial: '0.00',
+          admin: '0.00',
+          programador: '0.00',
+        };
+        for (const role of ALL_ROLES) {
+          if (editingPrices[vId]?.[role] !== undefined) {
+            loadedPrices[role] = editingPrices[vId][role];
+          }
+        }
+        setFormVariantPrices(loadedPrices);
+        setFormBasePrice(loadedPrices.cliente || '0.00');
+        setFormEnablePrices(true);
+      } else {
+        setFormEnablePrices(false);
+      }
     } else {
+      // Modo Create para Categoría, Subcategoría y Producto
       setFormName('');
       setFormSlug('');
       setFormDesc('');
       setFormQuantity('0');
       setFormOrder('0');
       setFormImageUrl('');
+      setFormActivo(true);
+      setFormEnablePrices(false);
+      setFormVariantPrices({
+        cliente: '1.00',
+        cliente_especial: '0.95',
+        revendedor: '0.90',
+        revendedor_especial: '0.85',
+        admin: '0.80',
+        programador: '0.80',
+      });
+      setFormBasePrice('1.00');
     }
   };
 
@@ -390,7 +431,7 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
-            activo: true,
+            activo: formActivo,
           }).select().single();
           if (error) throw error;
           await loadCategories(data.id);
@@ -401,6 +442,7 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
+            activo: formActivo,
           }).eq('id', selectedCatId);
           if (error) throw error;
           await loadCategories(selectedCatId);
@@ -418,7 +460,7 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
-            activo: true,
+            activo: formActivo,
           }).select().single();
           if (error) throw error;
           await loadSubcategories(data.id);
@@ -429,6 +471,7 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
+            activo: formActivo,
           }).eq('id', selectedSubId);
           if (error) throw error;
           await loadSubcategories(selectedSubId);
@@ -438,6 +481,7 @@ export default function AdminCatalogoPage() {
           alert('Primero selecciona una subcategoría padre.');
           return;
         }
+        let prodId = '';
         if (modalMode === 'create') {
           const { data, error } = await supabase.from('products').insert({
             subcategoria_id: selectedSubId,
@@ -446,20 +490,61 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
-            activo: true,
+            activo: formActivo,
           }).select().single();
           if (error) throw error;
-          await loadProducts(data.id);
+          prodId = data.id;
+          await loadProducts(prodId);
         } else {
+          prodId = selectedProdId;
           const { error } = await supabase.from('products').update({
             nombre: formName.trim(),
             slug: slugVal,
             descripcion: formDesc.trim(),
             imagen_url: formImageUrl.trim() || null,
             orden: orderNum,
+            activo: formActivo,
           }).eq('id', selectedProdId);
           if (error) throw error;
           await loadProducts(selectedProdId);
+        }
+
+        // Si se activaron precios por rol para el producto:
+        if (formEnablePrices && prodId) {
+          const { data: existingVars } = await supabase
+            .from('variants')
+            .select('id')
+            .eq('producto_id', prodId)
+            .order('orden', { ascending: true })
+            .limit(1);
+
+          let targetVarId = existingVars?.[0]?.id;
+          if (!targetVarId) {
+            const { data: newV } = await supabase.from('variants').insert({
+              producto_id: prodId,
+              nombre: formName.trim(),
+              descripcion: formDesc.trim() || 'Paquete base',
+              cantidad_items: parseFloat(formQuantity) || 1,
+              orden: 1,
+              activo: true,
+            }).select().single();
+            targetVarId = newV?.id;
+          }
+
+          if (targetVarId) {
+            for (const role of ALL_ROLES) {
+              const priceVal = parseFloat(formVariantPrices[role] || '0') || 0;
+              await supabase.from('prices').upsert(
+                {
+                  variante_id: targetVarId,
+                  rol: role,
+                  precio: priceVal,
+                },
+                { onConflict: 'variante_id,rol' }
+              );
+            }
+          }
+          await loadProductDetails();
         }
       } else if (activeModal === 'variant') {
         if (!selectedProdId) {
@@ -476,7 +561,7 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             cantidad_items: qtyNum,
             orden: orderNum,
-            activo: true,
+            activo: formActivo,
           }).select().single();
           if (varErr) throw varErr;
           variantId = newVar.id;
@@ -488,6 +573,7 @@ export default function AdminCatalogoPage() {
             descripcion: formDesc.trim(),
             cantidad_items: qtyNum,
             orden: orderNum,
+            activo: formActivo,
           }).eq('id', variantId);
           if (error) throw error;
         }
@@ -545,11 +631,13 @@ export default function AdminCatalogoPage() {
     }
   };
 
-  const handleDeleteProduct = async () => {
-    if (!selectedProdId) return;
-    if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
+  const handleDeleteProduct = async (idToDelete?: string) => {
+    const targetId = idToDelete || selectedProdId;
+    if (!targetId) return;
+    const targetProd = products.find(p => (p.id || p.producto_id) === targetId);
+    if (!confirm(`¿Seguro que deseas eliminar definitivamente el producto "${targetProd?.nombre || ''}"? Se eliminarán también todas sus variantes asociadas.`)) return;
     try {
-      const { error } = await supabase.from('products').delete().eq('id', selectedProdId);
+      const { error } = await supabase.from('products').delete().eq('id', targetId);
       if (error) throw error;
       await loadProducts();
     } catch (err: any) {
@@ -805,7 +893,7 @@ export default function AdminCatalogoPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={handleDeleteProduct}
+                    onClick={() => handleDeleteProduct()}
                     className="p-1 rounded bg-magenta/10 hover:bg-magenta/20 text-magenta text-xs"
                     title="Eliminar Producto"
                   >
@@ -923,6 +1011,134 @@ export default function AdminCatalogoPage() {
         </div>
 
       </div>
+
+      {/* ========================================================= */}
+      {/* GESTIÓN DE PRODUCTOS EXISTENTES (NIVEL 3)                 */}
+      {/* ========================================================= */}
+      {selectedSubId && (
+        <div className="cyber-panel rounded-2xl p-6 border-neon/30 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-neon/20">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-neon/15 text-neon text-[10px] font-mono uppercase mb-1">
+                <span>📦</span> Nivel 3: Gestión de Productos
+              </div>
+              <h2 className="text-base font-bold uppercase tracking-wider text-pure flex items-center gap-2">
+                <span>Productos Existentes en</span>
+                <span className="text-neon-cyan">{currentSubcategory?.nombre}</span>
+                <span className="text-xs text-ice/60 font-mono">({products.length})</span>
+              </h2>
+              <p className="text-xs font-mono text-ice/70">
+                Visualiza, edita o elimina productos existentes, o haz clic en uno para gestionar sus paquetes/variantes.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => openModal('product', 'create')}
+              className="btn-neon-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>+ Crear Producto</span>
+            </button>
+          </div>
+
+          {products.length === 0 ? (
+            <div className="p-8 text-center text-xs font-mono text-ice/60">
+              No hay productos registrados en esta subcategoría. Haz clic en <strong>"+ Crear Producto"</strong> para registrar el primero.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {products.map((p) => {
+                const pId = p.id || p.producto_id || '';
+                const isSelected = selectedProdId === pId;
+                return (
+                  <div
+                    key={pId}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isSelected
+                        ? 'bg-navy/90 border-neon-cyan shadow-[0_0_15px_rgba(0,210,255,0.25)]'
+                        : 'bg-pitch/80 border-neon/20 hover:border-neon/40'
+                    } flex flex-col justify-between gap-3`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {p.imagen_url ? (
+                        <img
+                          src={p.imagen_url}
+                          alt={p.nombre}
+                          className="w-12 h-12 object-cover rounded-lg border border-neon/30 shrink-0 bg-navy"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-navy border border-neon/20 flex items-center justify-center text-base shrink-0 text-ice/40">
+                          💎
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-pure text-sm truncate">{p.nombre}</h3>
+                          <span
+                            className={`px-2 py-0.2 rounded-full text-[9px] font-mono uppercase font-bold shrink-0 ${
+                              p.activo !== false
+                                ? 'bg-neon/15 text-neon border border-neon/30'
+                                : 'bg-magenta/15 text-magenta border border-magenta/30'
+                            }`}
+                          >
+                            {p.activo !== false ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-mono text-ice/60 truncate mt-0.5">
+                          Slug: /{p.slug}
+                        </p>
+                        {p.descripcion && (
+                          <p className="text-[11px] text-ice/70 line-clamp-2 mt-1">
+                            {p.descripcion}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-neon/10 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProdId(pId)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase font-bold transition-all ${
+                          isSelected
+                            ? 'bg-neon-cyan text-pitch shadow-[0_0_10px_rgba(0,210,255,0.4)]'
+                            : 'bg-pitch text-ice border border-neon/30 hover:border-neon'
+                        }`}
+                      >
+                        {isSelected ? '✓ Seleccionado' : 'Seleccionar'}
+                      </button>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedProdId(pId);
+                            openModal('product', 'edit', p);
+                          }}
+                          className="btn-ice-pill px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1"
+                          title="Editar producto existente"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-gold" />
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(pId)}
+                          className="p-1.5 rounded-lg bg-magenta/15 border border-magenta/30 text-magenta hover:bg-magenta hover:text-white text-xs transition-colors"
+                          title="Eliminar producto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* NIVEL 4: VARIANTES CON MATRIZ DE PRECIOS & BOTÓN MODAL    */}
@@ -1070,7 +1286,7 @@ export default function AdminCatalogoPage() {
       {/* ========================================================= */}
       {activeModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-fadeIn">
-          <div className={`w-full ${activeModal === 'variant' ? 'max-w-lg' : 'max-w-md'} cyber-panel p-6 rounded-2xl border border-neon-cyan/40 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl`}>
+          <div className="w-full max-w-xl cyber-panel p-6 rounded-2xl border border-neon-cyan/40 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neon/20 mb-4">
               <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
                 <span>
@@ -1190,32 +1406,57 @@ export default function AdminCatalogoPage() {
                 </div>
               )}
 
-              {activeModal === 'variant' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-mono uppercase text-ice mb-1">
-                      Cantidad de Items (Diamantes / Pases / Unidades):
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={formQuantity}
-                      onChange={(e) => setFormQuantity(e.target.value)}
-                      placeholder="Ej: 100"
-                      className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
-                    />
+              {(activeModal === 'variant' || activeModal === 'product') && (
+                <div>
+                  <label className="block text-xs font-mono uppercase text-ice mb-1">
+                    Cantidad de Items (Diamantes / Pases / Unidades):
+                  </label>
+                  <input
+                    type="number"
+                    value={formQuantity}
+                    onChange={(e) => setFormQuantity(e.target.value)}
+                    placeholder="Ej: 100"
+                    className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                  />
+                </div>
+              )}
+
+              {/* BLOQUE DE PRECIOS POR ROL: ACTIVO EN VARIANTE O ACTIVABLE EN CATEGORÍA, SUBCATEGORÍA Y PRODUCTO */}
+              <div className="p-3.5 rounded-xl bg-navy/80 border border-gold/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-gold" />
+                    <div>
+                      <h4 className="text-xs font-mono font-bold uppercase text-gold">
+                        Precios por Rol ($ USD)
+                      </h4>
+                      <p className="text-[10px] font-mono text-ice/60">
+                        {activeModal === 'variant'
+                          ? 'Asigna el costo del paquete para cada rol'
+                          : activeModal === 'product'
+                            ? 'Configura precios directos para este producto'
+                            : 'Configura tarifas base o sugeridas por rol'}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* MATRIZ DE PRECIOS POR ROL DENTRO DEL MODAL */}
-                  <div className="p-3.5 rounded-xl bg-navy/80 border border-gold/40 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-mono font-bold uppercase text-gold flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-gold" />
-                        <span>Precios por Rol ($ USD)</span>
-                      </label>
-                      <span className="text-[10px] font-mono text-ice/60">Asigna el costo por rol</span>
-                    </div>
+                  {activeModal !== 'variant' && (
+                    <button
+                      type="button"
+                      onClick={() => setFormEnablePrices(!formEnablePrices)}
+                      className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${
+                        formEnablePrices
+                          ? 'bg-gold text-pitch shadow-[0_0_10px_rgba(251,191,36,0.5)]'
+                          : 'bg-pitch border border-neon/30 text-ice hover:text-white'
+                      }`}
+                    >
+                      {formEnablePrices ? '✓ Activado' : '＋ Activar Precios'}
+                    </button>
+                  )}
+                </div>
 
+                {(activeModal === 'variant' || formEnablePrices) && (
+                  <div className="space-y-3 pt-2 border-t border-neon/20 animate-fadeIn">
                     {/* Atajo rápido de precio base */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-pitch/90 border border-neon/20">
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -1275,7 +1516,7 @@ export default function AdminCatalogoPage() {
                               <input
                                 type="number"
                                 step="0.01"
-                                required
+                                required={formEnablePrices || activeModal === 'variant'}
                                 value={formVariantPrices[role] ?? ''}
                                 onChange={(e) => {
                                   const val = e.target.value;
@@ -1289,8 +1530,31 @@ export default function AdminCatalogoPage() {
                       })}
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* TOGGLE ESTADO ACTIVO / INACTIVO */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-pitch/80 border border-neon/20">
+                <div>
+                  <span className="text-xs font-mono uppercase font-bold text-pure block">
+                    Estado en Tienda:
+                  </span>
+                  <span className="text-[10px] font-mono text-ice/60">
+                    {formActivo ? 'Visible y disponible para clientes' : 'Oculto (no se mostrará en el catálogo)'}
+                  </span>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setFormActivo(!formActivo)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${
+                    formActivo
+                      ? 'bg-neon/20 text-neon border border-neon/40'
+                      : 'bg-magenta/20 text-magenta border border-magenta/40'
+                  }`}
+                >
+                  {formActivo ? '✓ Activo' : '✕ Inactivo'}
+                </button>
+              </div>
 
               <div>
                 <label className="block text-xs font-mono uppercase text-ice mb-1">
