@@ -140,6 +140,27 @@ textarea::placeholder {
   transform: translateY(0);
 }
 
+/* Botón Dorado/Ámbar Píldora - Sin efecto neón */
+.btn-gold-pill {
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-gold-pill:hover {
+  background: linear-gradient(135deg, #B45309 0%, #92400E 100%);
+  border-color: rgba(251, 191, 36, 0.7);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-gold-pill:active {
+  transform: translateY(0);
+}
+
 /* Control de Scroll en Modales & Menús Flotantes (Evita scrolear el fondo) */
 .modal-overlay,
 .modal-content {

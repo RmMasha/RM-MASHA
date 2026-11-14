@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { PaymentMethod } from '@/types/database.types';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Edit2, Trash2, PlusCircle, Check, AlertTriangle } from 'lucide-react';
 
 export default function AdminMetodosPagoPage() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formulario de creación
+  // Formulario: Creación / Edición
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [nombre, setNombre] = useState('');
   const [formato, setFormato] = useState<'solo_numeros' | 'solo_letras' | 'alfanumerico'>('solo_numeros');
   const [logoUrl, setLogoUrl] = useState('');
@@ -63,6 +64,24 @@ export default function AdminMetodosPagoPage() {
     fetchMethods();
   }, []);
 
+  // Iniciar edición de un método
+  const handleStartEdit = (method: PaymentMethod) => {
+    const methodId = method.id || method.metodo_id || '';
+    setEditingId(methodId);
+    setNombre(method.nombre_metodo || '');
+    setFormato((method.formato_requerido as any) || 'solo_numeros');
+    setLogoUrl(method.logo_url || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Cancelar edición
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNombre('');
+    setFormato('solo_numeros');
+    setLogoUrl('');
+  };
+
   // Alternar estado activo/inactivo
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
@@ -78,26 +97,81 @@ export default function AdminMetodosPagoPage() {
     }
   };
 
-  // Crear nuevo método
-  const handleCreateMethod = async (e: React.FormEvent) => {
+  // Eliminar definitivamente un método de pago
+  const handleDeleteMethod = async (id: string, nombreMetodo: string) => {
+    const confirmed = window.confirm(
+      `¿Estás seguro de eliminar DEFINITIVAMENTE el método de pago "${nombreMetodo}"?\n\nEsta acción borrará el canal permanentemente del sistema.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('payment_methods')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        if (error.code === '23503') {
+          alert(
+            `No se puede eliminar "${nombreMetodo}" porque existen recargas o pedidos históricos vinculados a este método de pago.\n\nTe sugerimos usar el botón "DESACTIVAR" para ocultarlo a los clientes sin perder el historial.`
+          );
+        } else {
+          alert('Error al eliminar método: ' + error.message);
+        }
+        return;
+      }
+
+      if (editingId === id) {
+        handleCancelEdit();
+      }
+
+      await fetchMethods();
+    } catch (err: any) {
+      alert('Error inesperado: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Guardar (Crear o Actualizar) método
+  const handleSubmitMethod = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim()) return;
 
     try {
       setSubmitting(true);
-      const { error } = await supabase.from('payment_methods').insert({
-        nombre_metodo: nombre.trim(),
-        formato_requerido: formato,
-        logo_url: logoUrl.trim() || null,
-        activo: true,
-      });
 
-      if (error) throw error;
-      setNombre('');
-      setLogoUrl('');
+      if (editingId) {
+        // MODO EDICIÓN
+        const { error } = await supabase
+          .from('payment_methods')
+          .update({
+            nombre_metodo: nombre.trim(),
+            formato_requerido: formato,
+            logo_url: logoUrl.trim() || null,
+          })
+          .eq('id', editingId);
+
+        if (error) throw error;
+        handleCancelEdit();
+      } else {
+        // MODO CREACIÓN
+        const { error } = await supabase.from('payment_methods').insert({
+          nombre_metodo: nombre.trim(),
+          formato_requerido: formato,
+          logo_url: logoUrl.trim() || null,
+          activo: true,
+        });
+
+        if (error) throw error;
+        setNombre('');
+        setLogoUrl('');
+      }
+
       await fetchMethods();
     } catch (err: any) {
-      alert('Error creando método: ' + err.message);
+      alert('Error guardando método: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -114,19 +188,30 @@ export default function AdminMetodosPagoPage() {
           Métodos de Pago y Depósito
         </h1>
         <p className="text-xs text-ice/70 font-mono mt-1">
-          Habilita o deshabilita pasarelas (Binance, Pago Móvil, etc.) y especifica reglas de validación para la referencia.
+          Habilita, desactiva, edita o elimina definitivamente pasarelas (Binance, Pago Móvil, Zelle, etc.) y especifica reglas de validación.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Formulario de Alta (5 COLS) */}
+        {/* Formulario de Alta / Edición (5 COLS) */}
         <div className="lg:col-span-5 cyber-panel rounded-2xl p-6 border-neon/30">
-          <h2 className="text-base font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
-            Nuevo Canal de Pago
-          </h2>
+          <div className="flex items-center justify-between pb-3 border-b border-neon/20 mb-4">
+            <h2 className="text-base font-bold uppercase tracking-wider text-pure flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${editingId ? 'bg-gold shadow-[0_0_8px_#FBBF24]' : 'bg-neon shadow-[0_0_8px_#00D2FF]'}`} />
+              {editingId ? 'Editar Canal de Pago' : 'Nuevo Canal de Pago'}
+            </h2>
+            {editingId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="text-[11px] font-mono text-magenta hover:text-white px-2 py-1 rounded border border-magenta/30 hover:bg-magenta/20"
+              >
+                ✕ Cancelar edición
+              </button>
+            )}
+          </div>
 
-          <form onSubmit={handleCreateMethod} className="space-y-4">
+          <form onSubmit={handleSubmitMethod} className="space-y-4">
             <div>
               <label className="block text-xs font-mono uppercase text-ice mb-1">
                 Nombre del Canal / Banco:
@@ -211,13 +296,21 @@ export default function AdminMetodosPagoPage() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting || uploadingLogo}
-              className="w-full btn-neon-pill py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 mt-2"
-            >
-              {submitting ? 'Guardando...' : '+ Agregar Método de Pago'}
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={submitting || uploadingLogo}
+                className={`w-full py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 ${
+                  editingId ? 'btn-gold-pill' : 'btn-neon-pill'
+                }`}
+              >
+                {submitting
+                  ? 'Guardando...'
+                  : editingId
+                    ? '✓ Guardar Cambios del Canal'
+                    : '+ Agregar Método de Pago'}
+              </button>
+            </div>
           </form>
         </div>
 
@@ -236,12 +329,17 @@ export default function AdminMetodosPagoPage() {
             <div className="space-y-3">
               {methods.map((m) => {
                 const methodId = m.id || m.metodo_id || '';
+                const isCurrentEditing = editingId === methodId;
                 return (
                   <div
                     key={methodId}
-                    className="p-4 rounded-xl bg-navy/60 border border-neon/20 flex items-center justify-between"
+                    className={`p-4 rounded-xl bg-navy/60 border transition-all ${
+                      isCurrentEditing
+                        ? 'border-gold shadow-[0_0_15px_rgba(251,191,36,0.25)]'
+                        : 'border-neon/20 hover:border-neon/40'
+                    } flex flex-col sm:flex-row sm:items-center justify-between gap-3`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       {m.logo_url ? (
                         <img
                           src={m.logo_url}
@@ -253,8 +351,8 @@ export default function AdminMetodosPagoPage() {
                           🏦
                         </div>
                       )}
-                      <div>
-                        <h3 className="font-bold text-pure text-sm">{m.nombre_metodo}</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-pure text-sm truncate">{m.nombre_metodo}</h3>
                         <div className="text-[11px] font-mono text-ice/70 flex items-center gap-2 mt-0.5">
                           <span>Validación:</span>
                           <span className="text-neon">{m.formato_requerido}</span>
@@ -262,9 +360,9 @@ export default function AdminMetodosPagoPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end shrink-0">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-mono uppercase font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold ${
                           m.activo
                             ? 'bg-neon/15 text-neon border border-neon/30'
                             : 'bg-magenta/15 text-magenta border border-magenta/30'
@@ -272,11 +370,36 @@ export default function AdminMetodosPagoPage() {
                       >
                         {m.activo ? 'Activo' : 'Inactivo'}
                       </span>
+
                       <button
+                        type="button"
                         onClick={() => handleToggleActive(methodId, m.activo)}
-                        className="btn-ice-pill px-3 py-1 text-[11px] font-mono uppercase"
+                        className="btn-ice-pill px-2.5 py-1 text-[11px] font-mono uppercase"
+                        title={m.activo ? 'Desactivar canal' : 'Activar canal'}
                       >
                         {m.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(m)}
+                        className={`p-1.5 rounded-lg border text-xs transition-colors ${
+                          isCurrentEditing
+                            ? 'bg-gold/20 text-gold border-gold'
+                            : 'bg-pitch border-neon/30 text-ice hover:text-white hover:border-neon'
+                        }`}
+                        title="Editar método de pago"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMethod(methodId, m.nombre_metodo)}
+                        className="p-1.5 rounded-lg bg-magenta/15 border border-magenta/30 text-magenta hover:bg-magenta hover:text-white text-xs transition-colors"
+                        title="Eliminar método definitivamente"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

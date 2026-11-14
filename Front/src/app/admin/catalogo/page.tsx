@@ -40,6 +40,7 @@ export default function AdminCatalogoPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProdId, setSelectedProdId] = useState<string>('');
   const [variants, setVariants] = useState<(Variant & { prices: Price[] })[]>([]);
+  const [selectedVarId, setSelectedVarId] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   // Matriz de edición de precios
@@ -68,6 +69,17 @@ export default function AdminCatalogoPage() {
   const [formImageUrl, setFormImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Precios para modal de variante (Crear y Editar con precios directos)
+  const [formVariantPrices, setFormVariantPrices] = useState<Record<UserRole, string>>({
+    cliente: '1.00',
+    cliente_especial: '0.95',
+    revendedor: '0.90',
+    revendedor_especial: '0.85',
+    admin: '0.80',
+    programador: '0.80',
+  });
+  const [formBasePrice, setFormBasePrice] = useState('1.00');
 
   // Subir imagen (PNG, JPG, WEBP, SVG) a Supabase Storage bucket 'catalogo'
   const handleImageFileUpload = async (file: File) => {
@@ -219,6 +231,17 @@ export default function AdminCatalogoPage() {
           }
         }
         setEditingPrices(priceMap);
+        if (varsData.length > 0) {
+          setSelectedVarId((prev) => {
+            const exists = varsData.some((v: any) => (v.id || v.variante_id) === prev);
+            return exists ? prev : (varsData[0].id || varsData[0].variante_id || '');
+          });
+        } else {
+          setSelectedVarId('');
+        }
+      } else {
+        setVariants([]);
+        setSelectedVarId('');
       }
 
       // 2. Requisitos
@@ -277,6 +300,55 @@ export default function AdminCatalogoPage() {
   ) => {
     setActiveModal(level);
     setModalMode(mode);
+
+    if (level === 'variant') {
+      if (mode === 'edit' && existingItem) {
+        const varId = existingItem.id || existingItem.variante_id || '';
+        setFormName(existingItem.nombre || '');
+        setFormSlug(varId);
+        setFormDesc(existingItem.descripcion || '');
+        setFormQuantity(existingItem.cantidad_items ? String(existingItem.cantidad_items) : '0');
+        setFormOrder(existingItem.orden ? String(existingItem.orden) : '0');
+        setFormImageUrl('');
+
+        const loadedPrices: Record<UserRole, string> = {
+          cliente: '0.00',
+          cliente_especial: '0.00',
+          revendedor: '0.00',
+          revendedor_especial: '0.00',
+          admin: '0.00',
+          programador: '0.00',
+        };
+        for (const role of ALL_ROLES) {
+          if (editingPrices[varId]?.[role] !== undefined) {
+            loadedPrices[role] = editingPrices[varId][role];
+          } else {
+            const p = existingItem.prices?.find((item: any) => item.rol === role);
+            if (p) loadedPrices[role] = String(p.precio);
+          }
+        }
+        setFormVariantPrices(loadedPrices);
+        setFormBasePrice(loadedPrices.cliente || '0.00');
+      } else {
+        // Modo Crear Variante
+        setFormName('');
+        setFormSlug('');
+        setFormDesc('');
+        setFormQuantity('0');
+        setFormOrder('0');
+        setFormImageUrl('');
+        setFormVariantPrices({
+          cliente: '1.00',
+          cliente_especial: '0.95',
+          revendedor: '0.90',
+          revendedor_especial: '0.85',
+          admin: '0.80',
+          programador: '0.80',
+        });
+        setFormBasePrice('1.00');
+      }
+      return;
+    }
 
     if (mode === 'edit' && existingItem) {
       setFormName(existingItem.nombre || '');
@@ -395,6 +467,8 @@ export default function AdminCatalogoPage() {
           return;
         }
         const qtyNum = parseFloat(formQuantity) || 0;
+        let variantId = '';
+
         if (modalMode === 'create') {
           const { data: newVar, error: varErr } = await supabase.from('variants').insert({
             producto_id: selectedProdId,
@@ -405,30 +479,36 @@ export default function AdminCatalogoPage() {
             activo: true,
           }).select().single();
           if (varErr) throw varErr;
-
-          // Sembrar precios base para los 6 roles
-          for (const role of ALL_ROLES) {
-            await supabase.from('prices').insert({
-              variante_id: newVar.id,
-              rol: role,
-              precio: 1.00,
-            });
-          }
-          await loadProductDetails();
+          variantId = newVar.id;
         } else {
-          // Edit variant
-          const targetVar = variants.find(v => (v.id || v.variante_id) === formSlug);
-          if (targetVar) {
-            const { error } = await supabase.from('variants').update({
-              nombre: formName.trim(),
-              descripcion: formDesc.trim(),
-              cantidad_items: qtyNum,
-              orden: orderNum,
-            }).eq('id', formSlug);
-            if (error) throw error;
-            await loadProductDetails();
+          // Modo Edición de Variante
+          variantId = formSlug;
+          const { error } = await supabase.from('variants').update({
+            nombre: formName.trim(),
+            descripcion: formDesc.trim(),
+            cantidad_items: qtyNum,
+            orden: orderNum,
+          }).eq('id', variantId);
+          if (error) throw error;
+        }
+
+        // Guardar/Actualizar precios para los 6 roles inmediatamente
+        if (variantId) {
+          for (const role of ALL_ROLES) {
+            const priceVal = parseFloat(formVariantPrices[role] || '0') || 0;
+            await supabase.from('prices').upsert(
+              {
+                variante_id: variantId,
+                rol: role,
+                precio: priceVal,
+              },
+              { onConflict: 'variante_id,rol' }
+            );
           }
         }
+
+        await loadProductDetails();
+        if (variantId) setSelectedVarId(variantId);
       }
 
       closeModal();
@@ -478,8 +558,10 @@ export default function AdminCatalogoPage() {
   };
 
   const handleDeleteVariant = async (varId: string) => {
-    if (!confirm('¿Eliminar esta variante?')) return;
+    if (!confirm('¿Estás seguro de eliminar definitivamente esta variante y todos sus precios asociados?')) return;
     try {
+      // Eliminar precios primero por seguridad
+      await supabase.from('prices').delete().eq('variante_id', varId);
       const { error } = await supabase.from('variants').delete().eq('id', varId);
       if (error) throw error;
       await loadProductDetails();
@@ -521,6 +603,7 @@ export default function AdminCatalogoPage() {
   const currentCategory = categories.find(c => (c.id || c.categoria_id) === selectedCatId);
   const currentSubcategory = subcategories.find(s => (s.id || s.subcategoria_id) === selectedSubId);
   const currentProduct = products.find(p => (p.id || p.producto_id) === selectedProdId);
+  const currentVariant = variants.find(v => (v.id || v.variante_id) === selectedVarId);
 
   return (
     <div className="space-y-6">
@@ -541,9 +624,9 @@ export default function AdminCatalogoPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* SELECTORES Y CONTROLES CRUD EN LOS 3 PRIMEROS NIVELES     */}
+      {/* SELECTORES Y CONTROLES CRUD EN LOS 4 NIVELES              */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
         {/* NIVEL 1: CATEGORÍA */}
         <div className="cyber-panel rounded-2xl p-5 border-neon/30 space-y-3">
@@ -768,6 +851,77 @@ export default function AdminCatalogoPage() {
           )}
         </div>
 
+        {/* NIVEL 4: VARIANTE (CREAR, EDITAR Y PRECIOS DIRECTOS) */}
+        <div className="cyber-panel rounded-2xl p-5 border-neon/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono font-bold uppercase text-gold flex items-center gap-1.5">
+              <Boxes className="w-4 h-4 text-gold" />
+              <span>4. Variante</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={!selectedProdId}
+                onClick={() => openModal('variant', 'create')}
+                className="p-1 rounded bg-gold/15 hover:bg-gold/25 text-gold text-xs disabled:opacity-40"
+                title="Crear Nueva Variante con Precios"
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
+              {currentVariant && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openModal('variant', 'edit', currentVariant)}
+                    className="p-1 rounded bg-navy hover:bg-navy/80 text-gold text-xs"
+                    title="Editar Variante (Nombre, Precios, etc.)"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteVariant(currentVariant.id || currentVariant.variante_id || '')}
+                    className="p-1 rounded bg-magenta/10 hover:bg-magenta/20 text-magenta text-xs"
+                    title="Eliminar Variante"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <select
+            value={selectedVarId}
+            onChange={(e) => setSelectedVarId(e.target.value)}
+            disabled={variants.length === 0}
+            className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon disabled:opacity-50"
+          >
+            {variants.length === 0 ? (
+              <option value="">Sin variantes</option>
+            ) : (
+              variants.map((v) => {
+                const varId = v.id || v.variante_id || '';
+                return (
+                  <option key={varId} value={varId}>
+                    {v.nombre} ({v.cantidad_items || 0} items)
+                  </option>
+                );
+              })
+            )}
+          </select>
+          {currentVariant ? (
+            <div className="flex items-center justify-between pt-2 border-t border-neon/10 text-[10px] font-mono text-ice/70">
+              <span>Cliente: <strong className="text-gold">${editingPrices[selectedVarId]?.cliente || '0.00'}</strong></span>
+              <span className="text-neon-cyan">{currentVariant.cantidad_items || 0} items</span>
+            </div>
+          ) : (
+            <p className="text-[10px] font-mono text-ice/50 pt-2 border-t border-neon/10 truncate">
+              {selectedProdId ? 'Agrega o selecciona una variante' : 'Selecciona un producto'}
+            </p>
+          )}
+        </div>
+
       </div>
 
       {/* ========================================================= */}
@@ -799,14 +953,14 @@ export default function AdminCatalogoPage() {
                   <span>Requisitos de Entrega ({requirements.length})</span>
                 </button>
 
-                {/* BOTÓN NUEVA VARIANTE */}
+                {/* BOTÓN CREAR VARIANTE */}
                 <button
                   type="button"
                   onClick={() => openModal('variant', 'create')}
                   className="btn-neon-pill px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>+ Nueva Variante</span>
+                  <span>+ Crear Variante</span>
                 </button>
               </div>
             </div>
@@ -814,7 +968,7 @@ export default function AdminCatalogoPage() {
             {/* LISTA DE VARIANTES CON PRECIOS */}
             {variants.length === 0 ? (
               <div className="p-12 text-center text-xs font-mono text-ice/60">
-                Este producto no tiene variantes registradas. Haz clic en <strong>"+ Nueva Variante"</strong> para agregar el primer paquete.
+                Este producto no tiene variantes registradas. Haz clic en <strong>"+ Crear Variante"</strong> para agregar el primer paquete con sus precios.
               </div>
             ) : (
               <div className="space-y-5">
@@ -840,23 +994,23 @@ export default function AdminCatalogoPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => {
                               openModal('variant', 'edit', v);
-                              setFormSlug(varId);
                             }}
-                            className="p-1.5 rounded bg-pitch border border-neon/20 text-ice hover:text-white text-xs"
-                            title="Editar Variante"
+                            className="btn-ice-pill px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                            title="Editar Nombre, Cantidad y Precios de la Variante"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3.5 h-3.5 text-gold" />
+                            <span>Editar</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteVariant(varId)}
-                            className="p-1.5 rounded bg-magenta/15 border border-magenta/30 text-magenta text-xs"
-                            title="Eliminar Variante"
+                            className="p-1.5 rounded-lg bg-magenta/15 border border-magenta/30 text-magenta hover:bg-magenta hover:text-white text-xs transition-colors"
+                            title="Eliminar Variante Definitivamente"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -864,7 +1018,7 @@ export default function AdminCatalogoPage() {
                             type="button"
                             disabled={savingPrices === varId}
                             onClick={() => handleSavePrices(varId)}
-                            className="btn-neon-pill px-4 py-1.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center gap-1.5 ml-2"
+                            className="btn-neon-pill px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center gap-1.5"
                           >
                             <Save className="w-3.5 h-3.5" />
                             <span>{savingPrices === varId ? 'Guardando...' : 'Guardar Precios'}</span>
@@ -916,7 +1070,7 @@ export default function AdminCatalogoPage() {
       {/* ========================================================= */}
       {activeModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-fadeIn">
-          <div className="w-full max-w-md cyber-panel p-6 rounded-2xl border border-neon-cyan/40 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl">
+          <div className={`w-full ${activeModal === 'variant' ? 'max-w-lg' : 'max-w-md'} cyber-panel p-6 rounded-2xl border border-neon-cyan/40 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl`}>
             <div className="flex items-center justify-between pb-3 border-b border-neon/20 mb-4">
               <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
                 <span>
@@ -950,7 +1104,7 @@ export default function AdminCatalogoPage() {
                       setFormSlug(generateSlug(e.target.value));
                     }
                   }}
-                  placeholder="Ej: Free Fire - Diamantes"
+                  placeholder={activeModal === 'variant' ? 'Ej: 100 + 10 Diamantes Bonus' : 'Ej: Free Fire - Diamantes'}
                   className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
                 />
               </div>
@@ -1037,16 +1191,104 @@ export default function AdminCatalogoPage() {
               )}
 
               {activeModal === 'variant' && (
-                <div>
-                  <label className="block text-xs font-mono uppercase text-ice mb-1">
-                    Cantidad de Items (Diamantes / Unidades):
-                  </label>
-                  <input
-                    type="number"
-                    value={formQuantity}
-                    onChange={(e) => setFormQuantity(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-mono uppercase text-ice mb-1">
+                      Cantidad de Items (Diamantes / Pases / Unidades):
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={formQuantity}
+                      onChange={(e) => setFormQuantity(e.target.value)}
+                      placeholder="Ej: 100"
+                      className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-white text-xs font-mono focus:outline-none focus:border-neon-cyan"
+                    />
+                  </div>
+
+                  {/* MATRIZ DE PRECIOS POR ROL DENTRO DEL MODAL */}
+                  <div className="p-3.5 rounded-xl bg-navy/80 border border-gold/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono font-bold uppercase text-gold flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-gold" />
+                        <span>Precios por Rol ($ USD)</span>
+                      </label>
+                      <span className="text-[10px] font-mono text-ice/60">Asigna el costo por rol</span>
+                    </div>
+
+                    {/* Atajo rápido de precio base */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-pitch/90 border border-neon/20">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[11px] font-mono text-ice">Precio Base ($):</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="1.00"
+                          value={formBasePrice}
+                          onChange={(e) => setFormBasePrice(e.target.value)}
+                          className="w-20 px-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-gold"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = parseFloat(formBasePrice) || 0;
+                          if (base > 0) {
+                            setFormVariantPrices({
+                              cliente: base.toFixed(2),
+                              cliente_especial: (base * 0.95).toFixed(2),
+                              revendedor: (base * 0.90).toFixed(2),
+                              revendedor_especial: (base * 0.85).toFixed(2),
+                              admin: (base * 0.80).toFixed(2),
+                              programador: (base * 0.80).toFixed(2),
+                            });
+                          }
+                        }}
+                        className="btn-ice-pill px-2.5 py-1 text-[10px] font-mono uppercase text-center"
+                      >
+                        Auto-calcular descuentos
+                      </button>
+                    </div>
+
+                    {/* Inputs individuales por rol */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {ALL_ROLES.map((role) => {
+                        const label =
+                          role === 'cliente'
+                            ? '👤 Cliente'
+                            : role === 'cliente_especial'
+                              ? '⭐ Especial'
+                              : role === 'revendedor'
+                                ? '💼 Revendedor'
+                                : role === 'revendedor_especial'
+                                  ? '👑 Rev. Especial'
+                                  : role === 'admin'
+                                    ? '🛡️ Admin'
+                                    : '💻 Programador';
+                        return (
+                          <div key={role} className="p-2 rounded-lg bg-pitch border border-neon/20">
+                            <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
+                              {label}:
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1 text-gold font-mono text-xs">$</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                required
+                                value={formVariantPrices[role] ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormVariantPrices((prev) => ({ ...prev, [role]: val }));
+                                }}
+                                className="w-full pl-5 pr-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-gold"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
