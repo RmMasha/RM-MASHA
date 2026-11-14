@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { SocialLink } from '@/types/database.types';
 import {
   Share2,
@@ -45,6 +46,9 @@ export default function AdminRedesPage() {
   // Modal para Crear / Editar
   const [modalOpen, setModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<SocialLink | null>(null);
+
+  // Bloquea scroll del fondo cuando el modal está abierto
+  useBodyScrollLock(modalOpen);
 
   // Campos del formulario
   const [nombre, setNombre] = useState('');
@@ -245,7 +249,7 @@ export default function AdminRedesPage() {
 
         <button
           onClick={openCreateModal}
-          className="btn-neon-pill px-5 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-neon"
+          className="btn-neon-pill px-5 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           <span>+ Agregar Red Social</span>
@@ -364,8 +368,8 @@ export default function AdminRedesPage() {
 
       {/* MODAL CREAR / EDITAR */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="cyber-panel rounded-3xl p-6 sm:p-8 max-w-lg w-full border-neon/40 shadow-neon space-y-6 relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="cyber-panel rounded-3xl p-6 sm:p-8 max-w-lg w-full border-neon/40 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto overscroll-contain">
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-5 right-5 text-ice/60 hover:text-white p-1"

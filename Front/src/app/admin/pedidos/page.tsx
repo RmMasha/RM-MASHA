@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { formatDate, getOrderStatusBadge } from '@/lib/utils';
 import { getRenderedNotification } from '@/lib/notifications';
 
@@ -16,6 +17,9 @@ export default function AdminPedidosPage() {
   // Modal para ver comprobante
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Bloquea scroll del fondo cuando el visor de comprobante está abierto
+  useBodyScrollLock(!!previewImageUrl);
 
   // Cargar pedidos según pestaña y página
   const fetchOrders = async () => {
@@ -148,7 +152,7 @@ export default function AdminPedidosPage() {
               setPage(1);
             }}
             className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${activeTab === tab
-                ? 'btn-neon-pill font-bold shadow-neon'
+                ? 'btn-neon-pill font-bold'
                 : 'text-ice/70 hover:text-white hover:bg-navy/60'
               }`}
           >
@@ -325,8 +329,8 @@ export default function AdminPedidosPage() {
 
       {/* Modal para Visualizar Comprobante de Pago */}
       {previewImageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="cyber-panel p-6 rounded-2xl max-w-2xl w-full border-neon shadow-neon">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="cyber-panel p-6 rounded-2xl max-w-2xl w-full border-neon/40 shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-bold uppercase tracking-wider text-pure">
                 Comprobante de Pago

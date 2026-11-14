@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/utils';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import {
   Sparkles,
   Star,
@@ -28,6 +29,9 @@ export default function AdminComentariosPage() {
   const [newNickname, setNewNickname] = useState('');
   const [newAvatarUrl, setNewAvatarUrl] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Bloquea scroll del fondo cuando el modal está abierto
+  useBodyScrollLock(showCreateModal);
 
   const fetchReviews = async () => {
     try {
@@ -460,8 +464,8 @@ export default function AdminComentariosPage() {
 
       {/* MODAL PARA AGREGAR NUEVA REFERENCIA DESTACADA */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-pitch-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md cyber-panel p-6 rounded-2xl border border-neon-cyan/50 shadow-[0_0_30px_rgba(0,210,255,0.2)]">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="w-full max-w-md cyber-panel p-6 rounded-2xl border border-neon-cyan/40 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl">
             <h3 className="text-base font-black text-white uppercase tracking-wider mb-2 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-neon-cyan" />
               <span>Nueva Referencia para el Hero</span>

@@ -284,7 +284,7 @@ export default async function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/catalogo"
-                className="btn-neon-pill px-8 py-3 text-sm font-bold uppercase tracking-wider shadow-neon"
+                className="btn-neon-pill px-8 py-3 text-sm font-bold uppercase tracking-wider"
               >
                 Ver Catálogo Completo
               </Link>

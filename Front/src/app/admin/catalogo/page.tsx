@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { Category, Subcategory, Product, Variant, Price, UserRole } from '@/types/database.types';
 import {
   FolderPlus,
@@ -54,6 +55,9 @@ export default function AdminCatalogoPage() {
   // Modales CRUD
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [activeModal, setActiveModal] = useState<'category' | 'subcategory' | 'product' | 'variant' | null>(null);
+
+  // Bloquea el scroll del fondo cuando un modal está abierto
+  useBodyScrollLock(!!activeModal || showReqModal);
   
   // Campos del formulario modal
   const [formName, setFormName] = useState('');
@@ -911,8 +915,8 @@ export default function AdminCatalogoPage() {
       {/* MODAL CRUD PARA CATEGORÍAS / SUBCATEGORÍAS / PRODUCTOS     */}
       {/* ========================================================= */}
       {activeModal && (
-        <div className="fixed inset-0 z-50 bg-pitch-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md cyber-panel p-6 rounded-2xl border border-neon-cyan/50 shadow-[0_0_30px_rgba(0,210,255,0.25)]">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="w-full max-w-md cyber-panel p-6 rounded-2xl border border-neon-cyan/40 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neon/20 mb-4">
               <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
                 <span>
@@ -1095,8 +1099,8 @@ export default function AdminCatalogoPage() {
       {/* VENTANA MODAL ESPECIALIZADA: REQUISITOS DE ENTREGA        */}
       {/* ========================================================= */}
       {showReqModal && (
-        <div className="fixed inset-0 z-50 bg-pitch-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl cyber-panel p-6 rounded-2xl border border-neon-cyan/50 shadow-[0_0_35px_rgba(0,210,255,0.25)] space-y-5">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="w-full max-w-xl cyber-panel p-6 rounded-2xl border border-neon-cyan/40 space-y-5 max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-neon/20">
               <div>
                 <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">

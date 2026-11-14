@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { UserProfile, UserRole } from '@/types/database.types';
 import { formatCurrency, formatDate, getRoleBadge } from '@/lib/utils';
 import {
@@ -36,6 +37,9 @@ export default function AdminUsuariosPage() {
   const [updatingRole, setUpdatingRole] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Bloquea scroll del fondo cuando el modal de rol está abierto
+  useBodyScrollLock(!!selectedUser);
 
   const fetchUsers = async () => {
     try {
@@ -405,8 +409,8 @@ export default function AdminUsuariosPage() {
 
       {/* MODAL PARA CAMBIO DE ROL */}
       {selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="cyber-panel rounded-3xl p-6 sm:p-8 max-w-md w-full border-neon/40 shadow-neon space-y-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="cyber-panel rounded-3xl p-6 sm:p-8 max-w-md w-full border-neon/40 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto overscroll-contain">
             <button
               onClick={() => setSelectedUser(null)}
               className="absolute top-5 right-5 text-ice/60 hover:text-white p-1"

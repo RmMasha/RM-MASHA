@@ -227,7 +227,7 @@ export default function AdminAparienciaPage() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="btn-neon-pill px-5 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-neon"
+            className="btn-neon-pill px-5 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
@@ -686,7 +686,7 @@ export default function AdminAparienciaPage() {
             <button
               type="submit"
               disabled={saving}
-              className="btn-neon-pill px-8 py-3 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-neon"
+              className="btn-neon-pill px-8 py-3 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               <span>{saving ? 'Guardando Apariencia...' : 'Guardar Cambios de Apariencia'}</span>

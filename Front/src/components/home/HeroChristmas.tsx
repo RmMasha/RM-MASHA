@@ -123,10 +123,10 @@ export function HeroChristmas({ featuredReviews = [] }: HeroProps) {
                 </div>
               </div>
 
-              {/* BOTÓN PÍLDORA NEÓN PARA IR AL CATÁLOGO */}
+              {/* BOTÓN PÍLDORA PARA IR AL CATÁLOGO */}
               <Link
                 href="/catalogo"
-                className="btn-neon-pill w-full py-3.5 text-center font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,210,255,0.4)]"
+                className="btn-neon-pill w-full py-3.5 text-center font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
               >
                 <span>Ver Catálogo</span>
                 <ArrowRight className="w-4 h-4" />

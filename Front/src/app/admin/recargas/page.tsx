@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { formatCurrency, formatDate, getOrderStatusBadge } from '@/lib/utils';
 
 export default function AdminRecargasPage() {
@@ -12,6 +13,9 @@ export default function AdminRecargasPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  // Bloquea scroll del fondo cuando el visor de comprobante está abierto
+  useBodyScrollLock(!!previewImageUrl);
 
   const fetchRecharges = async () => {
     try {
@@ -133,7 +137,7 @@ export default function AdminRecargasPage() {
             onClick={() => setFilterState(tab)}
             className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-all ${
               filterState === tab
-                ? 'btn-neon-pill font-bold shadow-neon'
+                ? 'btn-neon-pill font-bold'
                 : 'text-ice/70 hover:text-white hover:bg-navy/60'
             }`}
           >
@@ -242,8 +246,8 @@ export default function AdminRecargasPage() {
 
       {/* Modal Visor de Comprobante */}
       {previewImageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="cyber-panel p-6 rounded-2xl max-w-2xl w-full border-neon shadow-neon">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-fadeIn">
+          <div className="cyber-panel p-6 rounded-2xl max-w-2xl w-full border-neon/40 shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-bold uppercase tracking-wider text-pure">
                 Comprobante de Recarga
