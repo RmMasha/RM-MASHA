@@ -134,66 +134,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. CARACTERÍSTICAS / PROPUESTAS DE VALOR DE RM & MASHA */}
-      <section className="container mx-auto px-4 sm:px-6">
-        <div className="cyber-panel rounded-3xl p-8 md:p-12 relative overflow-hidden border-neon/30">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-magenta/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-neon/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="text-center max-w-2xl mx-auto mb-10 relative z-10">
-            <span className="text-xs font-mono uppercase text-magenta tracking-widest">
-              Tecnología & Eficiencia
-            </span>
-            <h2 className="text-2xl md:text-3xl font-black text-pure uppercase tracking-wider mt-1">
-              ¿Por qué recargar con <span className="text-neon">RM & Masha</span>?
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            <div className="bg-navy/70 border border-neon/20 rounded-2xl p-5 hover:border-neon transition-colors">
-              <div className="w-10 h-10 rounded-full bg-gold/15 border border-gold/40 flex items-center justify-center text-gold mb-3 text-lg">
-                ⚡
-              </div>
-              <h4 className="text-base font-bold text-pure mb-1">Billetera Automatizada</h4>
-              <p className="text-xs text-ice/70 font-mono leading-relaxed">
-                Paga instantáneamente con tu saldo disponible. La orden se confirma y procesa al segundo sin esperas manuales.
-              </p>
-            </div>
-
-            <div className="bg-navy/70 border border-neon/20 rounded-2xl p-5 hover:border-neon transition-colors">
-              <div className="w-10 h-10 rounded-full bg-magenta/15 border border-magenta/40 flex items-center justify-center text-magenta mb-3 text-lg">
-                👑
-              </div>
-              <h4 className="text-base font-bold text-pure mb-1">Precios por Rol</h4>
-              <p className="text-xs text-ice/70 font-mono leading-relaxed">
-                Descuentos progresivos para Revendedores y Clientes Especiales. A mayor nivel, mayor rentabilidad para tu negocio.
-              </p>
-            </div>
-
-            <div className="bg-navy/70 border border-neon/20 rounded-2xl p-5 hover:border-neon transition-colors">
-              <div className="w-10 h-10 rounded-full bg-ice/15 border border-ice/40 flex items-center justify-center text-ice mb-3 text-lg">
-                🛡️
-              </div>
-              <h4 className="text-base font-bold text-pure mb-1">Aislamiento Seguro</h4>
-              <p className="text-xs text-ice/70 font-mono leading-relaxed">
-                Tus datos de cuenta y pagos están blindados con cifrado PostgreSQL a nivel de fila (RLS) y almacenamiento seguro.
-              </p>
-            </div>
-
-            <div className="bg-navy/70 border border-neon/20 rounded-2xl p-5 hover:border-neon transition-colors">
-              <div className="w-10 h-10 rounded-full bg-neon/15 border border-neon/40 flex items-center justify-center text-neon mb-3 text-lg">
-                🎁
-              </div>
-              <h4 className="text-base font-bold text-pure mb-1">Promociones & Recompensas</h4>
-              <p className="text-xs text-ice/70 font-mono leading-relaxed">
-                Bonos especiales en recargas de saldo y sorteos exclusivos en nuestra comunidad de WhatsApp y Telegram.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. RESEÑAS Y TESTIMONIOS DE LA COMUNIDAD (REALES) */}
+      {/* 3. RESEÑAS Y TESTIMONIOS DE LA COMUNIDAD (REALES) */}
       <section id="comentarios" className="container mx-auto px-4 sm:px-6 scroll-mt-24">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8">
           <div>

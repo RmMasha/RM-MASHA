@@ -58,7 +58,7 @@ export default function AdminCatalogoPage() {
 
   // Bloquea el scroll del fondo cuando un modal está abierto
   useBodyScrollLock(!!activeModal || showReqModal);
-  
+
   // Campos del formulario modal
   const [formName, setFormName] = useState('');
   const [formSlug, setFormSlug] = useState('');
@@ -78,8 +78,8 @@ export default function AdminCatalogoPage() {
         activeModal === 'category'
           ? 'categorias'
           : activeModal === 'subcategory'
-          ? 'subcategorias'
-          : 'productos';
+            ? 'subcategorias'
+            : 'productos';
       const cleanName = (formSlug || generateSlug(formName) || 'item').slice(0, 30);
       const path = `${folder}/${cleanName}_${Date.now()}.${ext}`;
 
@@ -544,7 +544,7 @@ export default function AdminCatalogoPage() {
       {/* SELECTORES Y CONTROLES CRUD EN LOS 3 PRIMEROS NIVELES     */}
       {/* ========================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* NIVEL 1: CATEGORÍA */}
         <div className="cyber-panel rounded-2xl p-5 border-neon/30 space-y-3">
           <div className="flex items-center justify-between">
@@ -775,7 +775,7 @@ export default function AdminCatalogoPage() {
       {/* ========================================================= */}
       {selectedProdId && (
         <div className="space-y-6">
-          
+
           <div className="cyber-panel rounded-2xl p-6 border-neon/30">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-neon/20">
               <div>
@@ -924,10 +924,10 @@ export default function AdminCatalogoPage() {
                   {activeModal === 'category'
                     ? 'Categoría'
                     : activeModal === 'subcategory'
-                    ? 'Subcategoría'
-                    : activeModal === 'product'
-                    ? 'Producto'
-                    : 'Variante'}
+                      ? 'Subcategoría'
+                      : activeModal === 'product'
+                        ? 'Producto'
+                        : 'Variante'}
                 </span>
               </h3>
               <button onClick={closeModal} className="text-ice hover:text-white">

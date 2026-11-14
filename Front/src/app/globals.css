@@ -142,9 +142,8 @@ textarea::placeholder {
 
 /* Control de Scroll en Modales & Menús Flotantes (Evita scrolear el fondo) */
 .modal-overlay,
-.modal-content,
-.overscroll-contain {
-  overscroll-behavior: contain !important;
+.modal-content {
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
