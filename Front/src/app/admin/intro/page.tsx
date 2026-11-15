@@ -15,6 +15,9 @@ import {
   Eye,
   Power,
   RotateCcw,
+  Clock,
+  Timer,
+  FastForward,
 } from 'lucide-react';
 
 export default function AdminIntroPage() {
@@ -37,6 +40,7 @@ export default function AdminIntroPage() {
   // Modal de prueba en vivo
   const [showLivePreview, setShowLivePreview] = useState(false);
   const livePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const livePreviewTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sincronizar estado inicial desde AppearanceContext
   useEffect(() => {
@@ -58,6 +62,9 @@ export default function AdminIntroPage() {
       if (livePreviewAudioRef.current) {
         livePreviewAudioRef.current.pause();
         livePreviewAudioRef.current = null;
+      }
+      if (livePreviewTimerRef.current) {
+        clearTimeout(livePreviewTimerRef.current);
       }
     };
   }, []);
@@ -157,7 +164,7 @@ export default function AdminIntroPage() {
         intro_activo: introActivo,
         intro_audio_url: introAudioUrl,
         intro_imagen_url: introImagenUrl,
-        intro_duracion_segundos: introDuracion,
+        intro_duracion_segundos: Number(introDuracion) || 5,
       });
       await refreshSettings();
       setSaveSuccess(true);
@@ -170,7 +177,7 @@ export default function AdminIntroPage() {
     }
   };
 
-  // Disparar prueba de pantalla completa en vivo durante 5 segundos
+  // Disparar prueba de pantalla completa en vivo durante la duración exacta configurada
   const handleStartLivePreview = () => {
     setShowLivePreview(true);
     try {
@@ -183,10 +190,13 @@ export default function AdminIntroPage() {
       console.warn('Error iniciando audio en prueba:', err);
     }
 
-    setTimeout(() => {
+    if (livePreviewTimerRef.current) {
+      clearTimeout(livePreviewTimerRef.current);
+    }
+
+    livePreviewTimerRef.current = setTimeout(() => {
       setShowLivePreview(false);
-      // Mantener audio sonando o detener según preferencia de previsualización
-    }, 5000);
+    }, (Number(introDuracion) || 5) * 1000);
   };
 
   return (
@@ -204,7 +214,7 @@ export default function AdminIntroPage() {
             Intro & Vinilo Temporal
           </h1>
           <p className="text-xs text-ice/70 mt-1 max-w-2xl font-sans">
-            Configura la animación del vinilo giratorio y la música de fondo que experimentan los visitantes durante los primeros 5 segundos al entrar a la tienda.
+            Configura la animación del vinilo giratorio, la duración en segundos y la música de fondo que experimentan los visitantes al entrar a la tienda.
           </p>
         </div>
 
@@ -216,7 +226,7 @@ export default function AdminIntroPage() {
             className="px-4 py-2 rounded-xl bg-magenta/20 hover:bg-magenta/30 border border-magenta/40 text-magenta text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(255,0,128,0.2)]"
           >
             <Eye className="w-4 h-4" />
-            <span>Probar Intro (5s)</span>
+            <span>Probar Intro ({introDuracion}s)</span>
           </button>
 
           <button
@@ -291,6 +301,103 @@ export default function AdminIntroPage() {
         </button>
       </div>
 
+      {/* ========================================================================= */}
+      {/* SECCIÓN NUEVA: CONFIGURACIÓN DE DURACIÓN DEL VINILO                       */}
+      {/* ========================================================================= */}
+      <div className="cyber-panel rounded-2xl p-6 border-neon/30 space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-neon/20">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-neon" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-pure">
+              Duración de la Intro
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono text-ice/70 uppercase">Duración Actual:</span>
+            <span className="px-3 py-1 rounded-lg bg-neon/20 border border-neon/40 text-neon font-black text-xs font-mono shadow-[0_0_10px_rgba(0,210,255,0.25)]">
+              {introDuracion} Segundos
+            </span>
+          </div>
+        </div>
+
+        <p className="text-xs text-ice/80 leading-relaxed font-sans">
+          Establece cuántos segundos se mostrará la pantalla del vinilo giratorio a los visitantes antes de ingresar automáticamente al catálogo principal. Los usuarios disponen además del botón <strong className="text-neon">"Saltar Intro ⏭"</strong> para acceder de inmediato sin tener que esperar.
+        </p>
+
+        {/* Control deslizante (Slider) y Campo Numérico */}
+        <div className="p-4 rounded-xl bg-pitch border border-neon/20 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center justify-between text-xs text-ice/70 font-mono">
+                <span>Rápida (1s)</span>
+                <span className="text-pure font-bold">{introDuracion} s</span>
+                <span>Larga (15s)</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={15}
+                step={1}
+                value={introDuracion}
+                onChange={(e) => setIntroDuracion(Number(e.target.value))}
+                className="w-full h-2 bg-navy rounded-lg appearance-none cursor-pointer accent-neon"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+              <label className="text-xs text-ice/70 font-mono uppercase">Segundos:</label>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={introDuracion}
+                onChange={(e) => {
+                  const val = Math.max(1, Math.min(30, Number(e.target.value) || 1));
+                  setIntroDuracion(val);
+                }}
+                className="w-20 px-3 py-1.5 rounded-xl bg-navy border border-neon/40 text-white font-mono text-center text-sm font-bold focus:outline-none focus:border-neon"
+              />
+            </div>
+          </div>
+
+          {/* Botones de Selección Rápida (Presets) */}
+          <div className="space-y-1.5 pt-2 border-t border-neon/10">
+            <span className="text-[10px] text-ice/60 uppercase font-mono tracking-wider block">
+              Preajustes Rápidos Recomendados:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { sec: 2, label: '2 seg (Ultra rápida)' },
+                { sec: 3, label: '3 seg (Dinámica)' },
+                { sec: 5, label: '5 seg (Recomendada)' },
+                { sec: 8, label: '8 seg (Giro completo)' },
+                { sec: 10, label: '10 seg (Cinemática)' },
+              ].map((preset) => (
+                <button
+                  key={preset.sec}
+                  type="button"
+                  onClick={() => setIntroDuracion(preset.sec)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all border ${
+                    introDuracion === preset.sec
+                      ? 'bg-neon/20 border-neon text-neon shadow-[0_0_12px_rgba(0,210,255,0.3)]'
+                      : 'bg-navy/60 hover:bg-navy border-neon/20 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-navy/60 border border-neon/20 text-ice/80 text-[11px] font-sans flex items-start gap-2">
+          <FastForward className="w-4 h-4 text-magenta shrink-0 mt-0.5" />
+          <span>
+            <strong>Audio continuo:</strong> Cuando se cumpla el tiempo o el usuario presione <em>"Saltar Intro"</em>, la música continuará sonando en segundo plano de manera ininterrumpida mientras navega por los productos.
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ========================================================================= */}
         {/* SECCIÓN 1: CONFIGURACIÓN DE AUDIO                                         */}
@@ -305,7 +412,7 @@ export default function AdminIntroPage() {
           </div>
 
           <p className="text-xs text-ice/80 leading-relaxed font-sans">
-            El audio comienza a reproducirse al ingresar y <strong className="text-neon-cyan">continúa sonando en segundo plano</strong> aun después de que el vinilo se oculte a los 5 segundos.
+            El audio comienza a reproducirse al ingresar y <strong className="text-neon-cyan">continúa sonando en segundo plano</strong> aun después de que el vinilo se oculte a los {introDuracion} segundos.
           </p>
 
           {/* Reproductor de Prueba y Estado */}
@@ -393,8 +500,8 @@ export default function AdminIntroPage() {
               <img
                 src={introImagenUrl}
                 alt="Vinilo Preview"
-                className="w-full h-full object-cover rounded-full animate-vinyl-spin select-none scale-[1.14]"
-                style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                className="w-full h-full object-cover rounded-full animate-vinyl-spin select-none"
+                style={{ clipPath: 'circle(48.5% at 50% 50%)' }}
                 onError={(e) => {
                   const target = e.currentTarget;
                   if (target.src !== encodeURI(introImagenUrl)) {
@@ -450,20 +557,37 @@ export default function AdminIntroPage() {
       {/* ========================================================================= */}
       {showLivePreview && (
         <div
-          className="fixed inset-0 z-[10000] bg-[#050811] flex flex-col items-center justify-center select-none overflow-hidden cursor-pointer"
-          onClick={() => setShowLivePreview(false)}
+          className="fixed inset-0 z-[100000] bg-[#050811] flex flex-col items-center justify-center select-none overflow-hidden cursor-pointer"
+          onClick={() => {
+            setShowLivePreview(false);
+            if (livePreviewTimerRef.current) clearTimeout(livePreviewTimerRef.current);
+          }}
         >
           {/* Fondo oficial de la tienda */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.14)_0%,rgba(7,11,25,0.96)_65%,#050811_100%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.15)_0%,rgba(7,11,25,0.96)_65%,#050811_100%)] pointer-events-none" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-magenta/10 rounded-full blur-[110px] pointer-events-none" />
 
+          {/* Botón Saltar Intro en preview */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowLivePreview(false);
+              if (livePreviewTimerRef.current) clearTimeout(livePreviewTimerRef.current);
+            }}
+            className="absolute top-6 right-6 z-20 flex items-center gap-2 px-5 py-2.5 rounded-full bg-pitch/90 border border-neon/60 text-white text-xs font-mono font-bold uppercase tracking-wider shadow-[0_0_20px_rgba(0,210,255,0.4)] hover:border-magenta hover:shadow-[0_0_25px_rgba(255,0,128,0.5)] transition-all"
+          >
+            <span>Saltar Intro</span>
+            <span className="text-neon text-sm">⏭</span>
+          </button>
+
           <div className="relative z-10 flex flex-col items-center justify-center p-4">
-            <div className="relative w-52 h-52 sm:w-60 sm:h-60 md:w-64 md:h-64 lg:w-72 lg:h-72 max-w-[75vw] max-h-[36vh] aspect-square rounded-full overflow-hidden shadow-[0_0_45px_rgba(255,0,128,0.4),0_0_75px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
+            <div className="relative w-56 h-56 sm:w-60 sm:h-60 md:w-64 md:h-64 aspect-square rounded-full overflow-hidden shadow-[0_0_45px_rgba(255,0,128,0.45),0_0_75px_rgba(0,210,255,0.25)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
               <img
                 src={introImagenUrl}
                 alt="RM & MASHA Vinilo Live Preview"
-                className="w-full h-full object-cover rounded-full pointer-events-none select-none scale-[1.14] animate-vinyl-spin"
-                style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                className="w-full h-full object-cover rounded-full pointer-events-none select-none animate-vinyl-spin"
+                style={{ clipPath: 'circle(48.5% at 50% 50%)' }}
                 onError={(e) => {
                   const target = e.currentTarget;
                   target.src = encodeURI(introImagenUrl);
@@ -471,9 +595,9 @@ export default function AdminIntroPage() {
               />
             </div>
 
-            <div className="mt-8 px-5 py-2 rounded-full bg-pitch-panel/90 border border-neon-blue/30 text-[11px] text-ice font-mono flex items-center gap-2 shadow-neon-border animate-pulse">
+            <div className="mt-7 px-5 py-2 rounded-full bg-pitch-panel/90 border border-neon-blue/30 text-[11px] text-ice font-mono flex items-center gap-2 shadow-neon-border animate-pulse">
               <span className="w-2.5 h-2.5 rounded-full bg-magenta animate-ping" />
-              <span>Prueba de Intro (5s) • Haz clic para cerrar</span>
+              <span>Prueba de Intro ({introDuracion}s) • Haz clic para cerrar</span>
             </div>
           </div>
         </div>
@@ -481,4 +605,3 @@ export default function AdminIntroPage() {
     </div>
   );
 }
-

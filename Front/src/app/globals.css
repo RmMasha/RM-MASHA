@@ -474,16 +474,16 @@ textarea::placeholder {
 /* ANIMACIÓN DE ROTACIÓN SUAVE DEL VINILO (OPTIMIZADA POR GPU) */
 /* ========================================================= */
 @keyframes vinylSpinSlow {
-  from {
-    transform: rotate(0deg);
+  0% {
+    transform: scale(1.14) rotate(0deg);
   }
-  to {
-    transform: rotate(360deg);
+  100% {
+    transform: scale(1.14) rotate(360deg);
   }
 }
 
 .animate-vinyl-spin {
   animation: vinylSpinSlow 8s linear infinite !important;
   will-change: transform;
-  transform-origin: center center;
+  transform-origin: 50% 50%;
 }
