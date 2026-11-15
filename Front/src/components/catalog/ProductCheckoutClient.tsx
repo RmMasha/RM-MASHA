@@ -79,8 +79,10 @@ export default function ProductCheckoutClient({
 
   // Determinar el precio según el rol del usuario (o 'cliente' por defecto)
   const userRole = profile?.rol || 'cliente';
-  const rolePriceObj = currentVariant?.prices?.find((p) => p.rol === userRole) 
-    || currentVariant?.prices?.find((p) => p.rol === 'cliente');
+  const rolePriceObj =
+    currentVariant?.prices?.find((p) => p.rol === userRole) ||
+    (userRole === 'programador' ? currentVariant?.prices?.find((p) => p.rol === 'admin') : null) ||
+    currentVariant?.prices?.find((p) => p.rol === 'cliente');
   const currentPrice = rolePriceObj ? Number(rolePriceObj.precio) : 0;
 
   // Comparar con precio cliente para mostrar ahorro si es revendedor
@@ -307,45 +309,47 @@ export default function ProductCheckoutClient({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* COLUMNA IZQUIERDA: SELECCIÓN DE PAQUETE / REQUISITOS (7 COLS) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Panel de Selección de Variante */}
-          <div className="cyber-panel rounded-2xl p-6 border-neon/30">
-            <h3 className="text-base font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
-              1. Selecciona tu Paquete de Diamantes
-            </h3>
+          {/* Panel de Selección de Variante (Solo visible si hay más de 1 opción disponible) */}
+          {variants.length > 1 && (
+            <div className="cyber-panel rounded-2xl p-6 border-neon/30">
+              <h3 className="text-base font-bold uppercase tracking-wider text-pure mb-4 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#00D2FF]" />
+                1. Selecciona tu Paquete / Opción
+              </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {variants.map((v) => {
-                const vId = v.id || v.variante_id || '';
-                const isSelected = vId === selectedVariantId;
-                const vPriceObj = v.prices?.find((p) => p.rol === userRole) || v.prices?.find((p) => p.rol === 'cliente');
-                const vPrice = vPriceObj ? Number(vPriceObj.precio) : 0;
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {variants.map((v) => {
+                  const vId = v.id || v.variante_id || '';
+                  const isSelected = vId === selectedVariantId;
+                  const vPriceObj = v.prices?.find((p) => p.rol === userRole) || v.prices?.find((p) => p.rol === 'cliente');
+                  const vPrice = vPriceObj ? Number(vPriceObj.precio) : 0;
 
-                return (
-                  <button
-                    key={vId}
-                    type="button"
-                    onClick={() => setSelectedVariantId(vId)}
-                    className={`p-4 rounded-xl text-left border transition-all ${
-                      isSelected
-                        ? 'border-neon bg-neon/10 shadow-[0_0_15px_rgba(0,210,255,0.35)]'
-                        : 'border-neon/20 bg-navy/60 hover:border-ice/50 hover:bg-navy/80'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-sm text-pure">{v.nombre}</span>
-                      <span className="text-xs font-mono font-bold text-gold">
-                        {formatCurrency(vPrice)}
-                      </span>
-                    </div>
-                    {v.descripcion && (
-                      <p className="text-[11px] font-mono text-ice/70">{v.descripcion}</p>
-                    )}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={vId}
+                      type="button"
+                      onClick={() => setSelectedVariantId(vId)}
+                      className={`p-4 rounded-xl text-left border transition-all ${
+                        isSelected
+                          ? 'border-neon bg-neon/10 shadow-[0_0_15px_rgba(0,210,255,0.35)]'
+                          : 'border-neon/20 bg-navy/60 hover:border-ice/50 hover:bg-navy/80'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm text-pure">{v.nombre}</span>
+                        <span className="text-xs font-mono font-bold text-gold">
+                          {formatCurrency(vPrice)}
+                        </span>
+                      </div>
+                      {v.descripcion && (
+                        <p className="text-[11px] font-mono text-ice/70">{v.descripcion}</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Panel de Requisitos (ID de Jugador, etc.) */}
           <div className="cyber-panel rounded-2xl p-6 border-neon/30">
@@ -412,10 +416,12 @@ export default function ProductCheckoutClient({
                 <span>Producto:</span>
                 <span className="text-pure font-bold">{product.nombre}</span>
               </div>
-              <div className="flex justify-between text-ice/80">
-                <span>Variante:</span>
-                <span className="text-pure font-bold">{currentVariant?.nombre || 'Default'}</span>
-              </div>
+              {variants.length > 1 && (
+                <div className="flex justify-between text-ice/80">
+                  <span>Opción / Paquete:</span>
+                  <span className="text-pure font-bold">{currentVariant?.nombre}</span>
+                </div>
+              )}
               <div className="flex justify-between text-ice/80">
                 <span>Tarifa según Rol:</span>
                 <span className="text-gold font-bold">{formatCurrency(currentPrice)}</span>

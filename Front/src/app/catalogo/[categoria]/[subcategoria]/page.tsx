@@ -124,12 +124,29 @@ export default async function SubcategoriaProductosPage({ params }: Props) {
                     {prod.descripcion || 'Recarga oficial sin riesgo de ban, acreditación rápida.'}
                   </p>
 
-                  {/* Variantes mini-list */}
-                  {prod.variants && prod.variants.length > 0 && (
-                    <div className="text-[11px] font-mono text-ice/60 mb-4">
-                      {prod.variants.length} {prod.variants.length === 1 ? 'paquete disponible' : 'paquetes disponibles'}
-                    </div>
-                  )}
+                  {/* Precio directo del producto en MXN */}
+                  {(() => {
+                    const firstV = prod.variants?.[0];
+                    const clientPrice = firstV?.prices?.find((p: any) => p.rol === 'cliente')?.precio;
+                    if (clientPrice !== undefined && clientPrice !== null && Number(clientPrice) > 0) {
+                      return (
+                        <div className="flex items-center justify-between mb-4 px-3 py-2 rounded-xl bg-pitch/80 border border-gold/30">
+                          <span className="text-[10px] font-mono uppercase text-ice/70">Precio:</span>
+                          <span className="text-sm font-mono font-black text-gold">
+                            ${parseFloat(clientPrice).toFixed(2)} MXN
+                          </span>
+                        </div>
+                      );
+                    }
+                    if (prod.variants && prod.variants.length > 1) {
+                      return (
+                        <div className="text-[11px] font-mono text-ice/60 mb-4">
+                          {prod.variants.length} paquetes disponibles
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div className="pt-4 border-t border-neon/15 flex items-center justify-between">

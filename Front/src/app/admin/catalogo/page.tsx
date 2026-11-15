@@ -29,7 +29,6 @@ const ALL_ROLES: UserRole[] = [
   'revendedor',
   'revendedor_especial',
   'admin',
-  'programador',
 ];
 
 export default function AdminCatalogoPage() {
@@ -316,12 +315,12 @@ export default function AdminCatalogoPage() {
         setFormActivo(existingItem.activo !== false);
 
         const loadedPrices: Record<UserRole, string> = {
-          cliente: '0.00',
-          cliente_especial: '0.00',
-          revendedor: '0.00',
-          revendedor_especial: '0.00',
-          admin: '0.00',
-          programador: '0.00',
+          cliente: '',
+          cliente_especial: '',
+          revendedor: '',
+          revendedor_especial: '',
+          admin: '',
+          programador: '',
         };
         for (const role of ALL_ROLES) {
           if (editingPrices[varId]?.[role] !== undefined) {
@@ -332,7 +331,7 @@ export default function AdminCatalogoPage() {
           }
         }
         setFormVariantPrices(loadedPrices);
-        setFormBasePrice(loadedPrices.cliente || '0.00');
+        setFormBasePrice(loadedPrices.cliente || '');
       } else {
         // Modo Crear Variante
         setFormName('');
@@ -343,14 +342,14 @@ export default function AdminCatalogoPage() {
         setFormImageUrl('');
         setFormActivo(true);
         setFormVariantPrices({
-          cliente: '1.00',
-          cliente_especial: '0.95',
-          revendedor: '0.90',
-          revendedor_especial: '0.85',
-          admin: '0.80',
-          programador: '0.80',
+          cliente: '',
+          cliente_especial: '',
+          revendedor: '',
+          revendedor_especial: '',
+          admin: '',
+          programador: '',
         });
-        setFormBasePrice('1.00');
+        setFormBasePrice('');
       }
       return;
     }
@@ -379,12 +378,12 @@ export default function AdminCatalogoPage() {
             const firstV = vData[0];
             setFormQuantity(firstV.cantidad_items ? String(firstV.cantidad_items) : '0');
             const loadedPrices: Record<UserRole, string> = {
-              cliente: '0.00',
-              cliente_especial: '0.00',
-              revendedor: '0.00',
-              revendedor_especial: '0.00',
-              admin: '0.00',
-              programador: '0.00',
+              cliente: '',
+              cliente_especial: '',
+              revendedor: '',
+              revendedor_especial: '',
+              admin: '',
+              programador: '',
             };
             if (firstV.prices && firstV.prices.length > 0) {
               for (const p of firstV.prices) {
@@ -397,12 +396,77 @@ export default function AdminCatalogoPage() {
               setFormEnablePrices(false);
             }
             setFormVariantPrices(loadedPrices);
-            setFormBasePrice(loadedPrices.cliente || '0.00');
+            setFormBasePrice(loadedPrices.cliente || '');
           } else {
             setFormEnablePrices(false);
           }
         } catch (e) {
           console.error('Error precargando precios de producto:', e);
+          setFormEnablePrices(false);
+        }
+      } else if (level === 'subcategory') {
+        const subId = existingItem.id || existingItem.subcategoria_id;
+        try {
+          const { data: pData } = await supabase
+            .from('products')
+            .select('id, variants(id, prices(*))')
+            .eq('subcategoria_id', subId)
+            .limit(1);
+          const firstV = (pData?.[0] as any)?.variants?.[0];
+          if (firstV?.prices && firstV.prices.length > 0) {
+            const loadedPrices: Record<UserRole, string> = {
+              cliente: '',
+              cliente_especial: '',
+              revendedor: '',
+              revendedor_especial: '',
+              admin: '',
+              programador: '',
+            };
+            for (const p of firstV.prices) {
+              if (p.rol && (loadedPrices as any)[p.rol] !== undefined) {
+                loadedPrices[p.rol as UserRole] = String(p.precio);
+              }
+            }
+            setFormVariantPrices(loadedPrices);
+            setFormBasePrice(loadedPrices.cliente || '');
+            setFormEnablePrices(true);
+          } else {
+            setFormEnablePrices(false);
+          }
+        } catch {
+          setFormEnablePrices(false);
+        }
+      } else if (level === 'category') {
+        const catId = existingItem.id || existingItem.categoria_id;
+        try {
+          const { data: sData } = await supabase
+            .from('subcategories')
+            .select('id, products(id, variants(id, prices(*)))')
+            .eq('categoria_id', catId)
+            .limit(1);
+          const firstP = sData?.[0]?.products?.[0];
+          const firstV = (firstP as any)?.variants?.[0];
+          if (firstV?.prices && firstV.prices.length > 0) {
+            const loadedPrices: Record<UserRole, string> = {
+              cliente: '',
+              cliente_especial: '',
+              revendedor: '',
+              revendedor_especial: '',
+              admin: '',
+              programador: '',
+            };
+            for (const p of firstV.prices) {
+              if (p.rol && (loadedPrices as any)[p.rol] !== undefined) {
+                loadedPrices[p.rol as UserRole] = String(p.precio);
+              }
+            }
+            setFormVariantPrices(loadedPrices);
+            setFormBasePrice(loadedPrices.cliente || '');
+            setFormEnablePrices(true);
+          } else {
+            setFormEnablePrices(false);
+          }
+        } catch {
           setFormEnablePrices(false);
         }
       } else {
@@ -419,14 +483,14 @@ export default function AdminCatalogoPage() {
       setFormActivo(true);
       setFormEnablePrices(false);
       setFormVariantPrices({
-        cliente: '1.00',
-        cliente_especial: '0.95',
-        revendedor: '0.90',
-        revendedor_especial: '0.85',
-        admin: '0.80',
-        programador: '0.80',
+        cliente: '',
+        cliente_especial: '',
+        revendedor: '',
+        revendedor_especial: '',
+        admin: '',
+        programador: '',
       });
-      setFormBasePrice('1.00');
+      setFormBasePrice('');
     }
   };
 
@@ -446,6 +510,7 @@ export default function AdminCatalogoPage() {
       const orderNum = parseInt(formOrder, 10) || 0;
 
       if (activeModal === 'category') {
+        let catId = '';
         if (modalMode === 'create') {
           const { data, error } = await supabase.from('categories').insert({
             nombre: formName.trim(),
@@ -456,8 +521,10 @@ export default function AdminCatalogoPage() {
             activo: formActivo,
           }).select().single();
           if (error) throw error;
-          await loadCategories(data.id);
+          catId = data.id;
+          await loadCategories(catId);
         } else {
+          catId = selectedCatId;
           const { error } = await supabase.from('categories').update({
             nombre: formName.trim(),
             slug: slugVal,
@@ -469,11 +536,81 @@ export default function AdminCatalogoPage() {
           if (error) throw error;
           await loadCategories(selectedCatId);
         }
+
+        // Si se activaron precios directos para la categoría:
+        if (formEnablePrices && catId) {
+          const { data: directSub } = await supabase.from('subcategories').upsert(
+            {
+              categoria_id: catId,
+              nombre: formName.trim(),
+              slug: slugVal,
+              descripcion: formDesc.trim() || 'Servicio directo',
+              imagen_url: formImageUrl.trim() || null,
+              orden: 1,
+              activo: true,
+            },
+            { onConflict: 'categoria_id,slug' }
+          ).select().single();
+
+          const directSubId = directSub?.id;
+          if (directSubId) {
+            const { data: directProd } = await supabase.from('products').upsert(
+              {
+                subcategoria_id: directSubId,
+                nombre: formName.trim(),
+                slug: slugVal,
+                descripcion: formDesc.trim() || 'Servicio directo',
+                imagen_url: formImageUrl.trim() || null,
+                orden: 1,
+                activo: true,
+              },
+              { onConflict: 'subcategoria_id,slug' }
+            ).select().single();
+
+            const directProdId = directProd?.id;
+            if (directProdId) {
+              const { data: existingV } = await supabase
+                .from('variants')
+                .select('id')
+                .eq('producto_id', directProdId)
+                .limit(1);
+
+              let targetVarId = existingV?.[0]?.id;
+              if (!targetVarId) {
+                const { data: newV } = await supabase.from('variants').insert({
+                  producto_id: directProdId,
+                  nombre: formName.trim(),
+                  descripcion: formDesc.trim() || 'Precio directo',
+                  cantidad_items: parseFloat(formQuantity) || 1,
+                  orden: 1,
+                  activo: true,
+                }).select().single();
+                targetVarId = newV?.id;
+              }
+
+              if (targetVarId) {
+                for (const role of ALL_ROLES) {
+                  const priceVal = parseFloat(formVariantPrices[role] || '0') || 0;
+                  await supabase.from('prices').upsert(
+                    { variante_id: targetVarId, rol: role, precio: priceVal },
+                    { onConflict: 'variante_id,rol' }
+                  );
+                }
+                const adminPrice = parseFloat(formVariantPrices.admin || '0') || 0;
+                await supabase.from('prices').upsert(
+                  { variante_id: targetVarId, rol: 'programador', precio: adminPrice },
+                  { onConflict: 'variante_id,rol' }
+                );
+              }
+            }
+          }
+        }
       } else if (activeModal === 'subcategory') {
         if (!selectedCatId) {
           alert('Primero selecciona una categoría padre.');
           return;
         }
+        let subId = '';
         if (modalMode === 'create') {
           const { data, error } = await supabase.from('subcategories').insert({
             categoria_id: selectedCatId,
@@ -485,8 +622,10 @@ export default function AdminCatalogoPage() {
             activo: formActivo,
           }).select().single();
           if (error) throw error;
-          await loadSubcategories(data.id);
+          subId = data.id;
+          await loadSubcategories(subId);
         } else {
+          subId = selectedSubId;
           const { error } = await supabase.from('subcategories').update({
             nombre: formName.trim(),
             slug: slugVal,
@@ -497,6 +636,59 @@ export default function AdminCatalogoPage() {
           }).eq('id', selectedSubId);
           if (error) throw error;
           await loadSubcategories(selectedSubId);
+        }
+
+        // Si se activaron precios directos para la subcategoría:
+        if (formEnablePrices && subId) {
+          const { data: directProd } = await supabase.from('products').upsert(
+            {
+              subcategoria_id: subId,
+              nombre: formName.trim(),
+              slug: slugVal,
+              descripcion: formDesc.trim() || 'Servicio directo',
+              imagen_url: formImageUrl.trim() || null,
+              orden: 1,
+              activo: true,
+            },
+            { onConflict: 'subcategoria_id,slug' }
+          ).select().single();
+
+          const directProdId = directProd?.id;
+          if (directProdId) {
+            const { data: existingV } = await supabase
+              .from('variants')
+              .select('id')
+              .eq('producto_id', directProdId)
+              .limit(1);
+
+            let targetVarId = existingV?.[0]?.id;
+            if (!targetVarId) {
+              const { data: newV } = await supabase.from('variants').insert({
+                producto_id: directProdId,
+                nombre: formName.trim(),
+                descripcion: formDesc.trim() || 'Precio directo',
+                cantidad_items: parseFloat(formQuantity) || 1,
+                orden: 1,
+                activo: true,
+              }).select().single();
+              targetVarId = newV?.id;
+            }
+
+            if (targetVarId) {
+              for (const role of ALL_ROLES) {
+                const priceVal = parseFloat(formVariantPrices[role] || '0') || 0;
+                await supabase.from('prices').upsert(
+                  { variante_id: targetVarId, rol: role, precio: priceVal },
+                  { onConflict: 'variante_id,rol' }
+                );
+              }
+              const adminPrice = parseFloat(formVariantPrices.admin || '0') || 0;
+              await supabase.from('prices').upsert(
+                { variante_id: targetVarId, rol: 'programador', precio: adminPrice },
+                { onConflict: 'variante_id,rol' }
+              );
+            }
+          }
         }
       } else if (activeModal === 'product') {
         if (!selectedSubId) {
@@ -531,7 +723,7 @@ export default function AdminCatalogoPage() {
           await loadProducts(selectedProdId);
         }
 
-        // Si se activaron precios por rol para el producto:
+        // Si se activaron precios directos para el producto:
         if (formEnablePrices && prodId) {
           const { data: existingVars } = await supabase
             .from('variants')
@@ -545,12 +737,17 @@ export default function AdminCatalogoPage() {
             const { data: newV } = await supabase.from('variants').insert({
               producto_id: prodId,
               nombre: formName.trim(),
-              descripcion: formDesc.trim() || 'Paquete base',
+              descripcion: formDesc.trim() || 'Precio directo',
               cantidad_items: parseFloat(formQuantity) || 1,
               orden: 1,
               activo: true,
             }).select().single();
             targetVarId = newV?.id;
+          } else {
+            await supabase.from('variants').update({
+              nombre: formName.trim(),
+              activo: formActivo,
+            }).eq('id', targetVarId);
           }
 
           if (targetVarId) {
@@ -565,6 +762,11 @@ export default function AdminCatalogoPage() {
                 { onConflict: 'variante_id,rol' }
               );
             }
+            const adminPrice = parseFloat(formVariantPrices.admin || '0') || 0;
+            await supabase.from('prices').upsert(
+              { variante_id: targetVarId, rol: 'programador', precio: adminPrice },
+              { onConflict: 'variante_id,rol' }
+            );
           }
           await loadProductDetails();
         }
@@ -1077,8 +1279,8 @@ export default function AdminCatalogoPage() {
                   <div
                     key={pId}
                     className={`p-4 rounded-xl border transition-all ${isSelected
-                        ? 'bg-navy/90 border-neon-cyan shadow-[0_0_15px_rgba(0,210,255,0.25)]'
-                        : 'bg-pitch/80 border-neon/20 hover:border-neon/40'
+                      ? 'bg-navy/90 border-neon-cyan shadow-[0_0_15px_rgba(0,210,255,0.25)]'
+                      : 'bg-pitch/80 border-neon/20 hover:border-neon/40'
                       } flex flex-col justify-between gap-3`}
                   >
                     <div className="flex items-start gap-3">
@@ -1098,8 +1300,8 @@ export default function AdminCatalogoPage() {
                           <h3 className="font-bold text-pure text-sm truncate">{p.nombre}</h3>
                           <span
                             className={`px-2 py-0.2 rounded-full text-[9px] font-mono uppercase font-bold shrink-0 ${p.activo !== false
-                                ? 'bg-neon/15 text-neon border border-neon/30'
-                                : 'bg-magenta/15 text-magenta border border-magenta/30'
+                              ? 'bg-neon/15 text-neon border border-neon/30'
+                              : 'bg-magenta/15 text-magenta border border-magenta/30'
                               }`}
                           >
                             {p.activo !== false ? 'Activo' : 'Inactivo'}
@@ -1121,8 +1323,8 @@ export default function AdminCatalogoPage() {
                         type="button"
                         onClick={() => setSelectedProdId(pId)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase font-bold transition-all ${isSelected
-                            ? 'bg-neon-cyan text-pitch shadow-[0_0_10px_rgba(0,210,255,0.4)]'
-                            : 'bg-pitch text-ice border border-neon/30 hover:border-neon'
+                          ? 'bg-neon-cyan text-pitch shadow-[0_0_10px_rgba(0,210,255,0.4)]'
+                          : 'bg-pitch text-ice border border-neon/30 hover:border-neon'
                           }`}
                       >
                         {isSelected ? '✓ Seleccionado' : 'Seleccionar'}
@@ -1170,10 +1372,10 @@ export default function AdminCatalogoPage() {
               <div>
                 <h2 className="text-base font-bold uppercase tracking-wider text-pure flex items-center gap-2">
                   <Boxes className="w-5 h-5 text-gold" />
-                  <span>Variantes & Matriz de Precios por Rol</span>
+                  <span>Paquetes / Variantes Opcionales</span>
                 </h2>
                 <p className="text-xs font-mono text-ice/70 mt-0.5">
-                  Producto: <strong className="text-white">{currentProduct?.nombre}</strong>
+                  Producto: <strong className="text-white">{currentProduct?.nombre}</strong> — <span className="text-gold">Opcional:</span> Si ya configuraste el precio en el producto arriba, NO necesitas crear variantes.
                 </p>
               </div>
 
@@ -1261,8 +1463,8 @@ export default function AdminCatalogoPage() {
                         </div>
                       </div>
 
-                      {/* MATRIZ DE PRECIOS PARA LOS 6 ROLES */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-neon/10">
+                      {/* MATRIZ DE PRECIOS PARA LOS 5 ROLES */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2 border-t border-neon/10">
                         {ALL_ROLES.map((role) => (
                           <div key={role} className="p-2.5 rounded-lg bg-pitch border border-neon/20">
                             <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
@@ -1450,11 +1652,13 @@ export default function AdminCatalogoPage() {
                         Precios por Rol ($ MXN - Pesos Mexicanos)
                       </h4>
                       <p className="text-[10px] font-mono text-ice/60">
-                        {activeModal === 'variant'
-                          ? 'Asigna el costo del paquete en Pesos Mexicanos (MXN) para cada rol'
-                          : activeModal === 'product'
-                            ? 'Configura precios directos en Pesos Mexicanos (MXN)'
-                            : 'Configura tarifas base en Pesos Mexicanos (MXN)'}
+                        {activeModal === 'category'
+                          ? 'Configura precios directos para comprar esta categoría sin necesidad de subcategorías'
+                          : activeModal === 'subcategory'
+                            ? 'Configura precios directos para comprar esta subcategoría sin necesidad de productos'
+                            : activeModal === 'product'
+                              ? 'Configura precios directos del producto (compra directa sin variantes ni subproductos)'
+                              : 'Asigna el costo del paquete en Pesos Mexicanos (MXN) para cada rol'}
                       </p>
                     </div>
                   </div>
@@ -1464,11 +1668,11 @@ export default function AdminCatalogoPage() {
                       type="button"
                       onClick={() => setFormEnablePrices(!formEnablePrices)}
                       className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${formEnablePrices
-                          ? 'bg-gold text-pitch shadow-[0_0_10px_rgba(251,191,36,0.5)]'
-                          : 'bg-pitch border border-neon/30 text-ice hover:text-white'
+                        ? 'bg-gold text-pitch shadow-[0_0_10px_rgba(251,191,36,0.5)]'
+                        : 'bg-pitch border border-neon/30 text-ice hover:text-white'
                         }`}
                     >
-                      {formEnablePrices ? '✓ Activado' : '＋ Activar Precios'}
+                      {formEnablePrices ? '✓ Precios Activados' : '＋ Activar Precios'}
                     </button>
                   )}
                 </div>
@@ -1476,17 +1680,29 @@ export default function AdminCatalogoPage() {
                 {(activeModal === 'variant' || formEnablePrices) && (
                   <div className="space-y-3 pt-2 border-t border-neon/20 animate-fadeIn">
                     {/* Atajo rápido de precio base */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-pitch/90 border border-neon/20">
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[11px] font-mono text-ice">Precio Base ($ MXN):</span>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-pitch/90 border border-gold/30">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-mono text-gold font-bold">Precio Base ($ MXN):</span>
                         <input
                           type="number"
                           step="0.01"
-                          placeholder="1.00"
+                          placeholder="Ej: 100"
                           value={formBasePrice}
-                          onChange={(e) => setFormBasePrice(e.target.value)}
-                          className="w-20 px-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-gold"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormBasePrice(val);
+                            setFormVariantPrices({
+                              cliente: val,
+                              cliente_especial: val,
+                              revendedor: val,
+                              revendedor_especial: val,
+                              admin: val,
+                              programador: val,
+                            });
+                          }}
+                          className="w-24 px-2.5 py-1 rounded-lg bg-navy text-pure text-xs font-mono border border-gold/50 focus:outline-none focus:border-gold"
                         />
+                        <span className="text-[10px] font-mono text-ice/50 hidden sm:inline">(Aplica a todos los roles)</span>
                       </div>
                       <button
                         type="button"
@@ -1503,14 +1719,15 @@ export default function AdminCatalogoPage() {
                             });
                           }
                         }}
-                        className="btn-ice-pill px-2.5 py-1 text-[10px] font-mono uppercase text-center"
+                        className="btn-ice-pill px-3 py-1 text-[10px] font-mono uppercase text-center"
+                        title="Aplica -5% Especial, -10% Revendedor, -15% Rev. Especial, -20% Admin"
                       >
-                        Auto-calcular descuentos
+                        ⚡ Descuentos Sugeridos
                       </button>
                     </div>
 
-                    {/* Inputs individuales por rol */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {/* Inputs individuales por rol (Sin Programador) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                       {ALL_ROLES.map((role) => {
                         const label =
                           role === 'cliente'
@@ -1521,9 +1738,7 @@ export default function AdminCatalogoPage() {
                                 ? '💼 Revendedor'
                                 : role === 'revendedor_especial'
                                   ? '👑 Rev. Especial'
-                                  : role === 'admin'
-                                    ? '🛡️ Admin'
-                                    : '💻 Programador';
+                                  : '🛡️ Admin';
                         return (
                           <div key={role} className="p-2 rounded-lg bg-pitch border border-neon/20">
                             <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
@@ -1566,8 +1781,8 @@ export default function AdminCatalogoPage() {
                   type="button"
                   onClick={() => setFormActivo(!formActivo)}
                   className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${formActivo
-                      ? 'bg-neon/20 text-neon border border-neon/40'
-                      : 'bg-magenta/20 text-magenta border border-magenta/40'
+                    ? 'bg-neon/20 text-neon border border-neon/40'
+                    : 'bg-magenta/20 text-magenta border border-magenta/40'
                     }`}
                 >
                   {formActivo ? '✓ Activo' : '✕ Inactivo'}

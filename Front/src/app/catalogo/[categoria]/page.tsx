@@ -27,16 +27,16 @@ export default async function CategoriaNivelPage({ params }: Props) {
     notFound();
   }
 
-  // 2. Obtener las subcategorías activas
+  // 2. Obtener las subcategorías activas con sus productos y precios
   const catId = (categoria as Category).id || (categoria as Category).categoria_id || '';
   const { data: subcategorias } = await supabase
     .from('subcategories')
-    .select('*')
+    .select('*, products(*, variants(*, prices(*)))')
     .eq('categoria_id', catId)
     .eq('activo', true)
     .order('orden', { ascending: true });
 
-  const subList: Subcategory[] = subcategorias || [];
+  const subList: any[] = subcategorias || [];
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
@@ -79,36 +79,57 @@ export default async function CategoriaNivelPage({ params }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {subList.map((sub, idx) => (
-              <Link
-                key={sub.id || sub.subcategoria_id}
-                href={`/catalogo/${categoriaSlug}/${sub.slug}`}
-                className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-ice group-hover:scale-105 transition-transform overflow-hidden">
-                    {sub.imagen_url ? (
-                      <img src={sub.imagen_url} alt={sub.nombre} className="w-full h-full object-cover" />
-                    ) : (
-                      idx % 2 === 0 ? '⚡' : '🔥'
-                    )}
-                  </div>
-                  <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
-                    {sub.nombre}
-                  </h3>
-                  <p className="text-xs text-ice/70 font-mono leading-relaxed line-clamp-2">
-                    {sub.descripcion || 'Paquetes de entrega inmediata por ID oficial.'}
-                  </p>
-                </div>
+            {subList.map((sub, idx) => {
+              const activeProds = (sub.products || []).filter((p: any) => p.activo !== false);
+              const isDirectProduct = activeProds.length === 1;
+              const directProd = isDirectProduct ? activeProds[0] : null;
+              const firstVar = directProd?.variants?.[0];
+              const clientPrice = firstVar?.prices?.find((p: any) => p.rol === 'cliente')?.precio;
 
-                <div className="pt-4 mt-6 border-t border-neon/15 flex items-center justify-between text-xs font-mono">
-                  <span className="text-ice/70">Nivel 2 de Catálogo</span>
-                  <span className="text-neon font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                    Ver Productos →
-                  </span>
-                </div>
-              </Link>
-            ))}
+              const targetHref = isDirectProduct
+                ? `/catalogo/${categoriaSlug}/${sub.slug}/${directProd.slug}`
+                : `/catalogo/${categoriaSlug}/${sub.slug}`;
+
+              return (
+                <Link
+                  key={sub.id || sub.subcategoria_id}
+                  href={targetHref}
+                  className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl text-ice group-hover:scale-105 transition-transform overflow-hidden">
+                        {sub.imagen_url ? (
+                          <img src={sub.imagen_url} alt={sub.nombre} className="w-full h-full object-cover" />
+                        ) : (
+                          idx % 2 === 0 ? '⚡' : '🔥'
+                        )}
+                      </div>
+                      {clientPrice !== undefined && clientPrice !== null && Number(clientPrice) > 0 && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-mono font-black text-gold bg-gold/10 border border-gold/30">
+                          ${parseFloat(clientPrice).toFixed(2)} MXN
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
+                      {sub.nombre}
+                    </h3>
+                    <p className="text-xs text-ice/70 font-mono leading-relaxed line-clamp-2">
+                      {sub.descripcion || 'Paquetes de entrega inmediata por ID oficial.'}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-6 border-t border-neon/15 flex items-center justify-between text-xs font-mono">
+                    <span className="text-ice/70">
+                      {isDirectProduct ? 'Compra Directa' : `${activeProds.length} Productos`}
+                    </span>
+                    <span className="text-neon font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      {isDirectProduct ? 'Comprar Ahora →' : 'Ver Productos →'}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

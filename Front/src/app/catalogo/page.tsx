@@ -13,10 +13,10 @@ export default async function CatalogoGeneralPage() {
   try {
     const { data: catData } = await supabase
       .from('categories')
-      .select('*')
+      .select('*, subcategories(*, products(*, variants(*, prices(*))))')
       .eq('activo', true)
       .order('orden', { ascending: true });
-    if (catData) categories = catData;
+    if (catData) categories = catData as any;
 
     const { data: prodData } = await supabase
       .from('products')
@@ -61,36 +61,60 @@ export default async function CatalogoGeneralPage() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {categories.map((cat, idx) => (
-            <Link
-              key={cat.id || cat.categoria_id}
-              href={`/catalogo/${cat.slug}`}
-              className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl mb-4 text-neon group-hover:scale-105 transition-transform overflow-hidden">
-                  {cat.imagen_url ? (
-                    <img src={cat.imagen_url} alt={cat.nombre} className="w-full h-full object-cover" />
-                  ) : (
-                    idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'
-                  )}
-                </div>
-                <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
-                  {cat.nombre}
-                </h3>
-                <p className="text-xs text-ice/70 font-mono leading-relaxed line-clamp-2">
-                  {cat.descripcion || 'Entregas instantáneas y soporte garantizado.'}
-                </p>
-              </div>
+          {categories.map((cat: any, idx) => {
+            const subs = (cat.subcategories || []).filter((s: any) => s.activo !== false);
+            const isSingleSub = subs.length === 1;
+            const singleSub = isSingleSub ? subs[0] : null;
+            const activeProds = (singleSub?.products || []).filter((p: any) => p.activo !== false);
+            const isDirectPurchase = isSingleSub && activeProds.length === 1;
+            const directProd = isDirectPurchase ? activeProds[0] : null;
+            const firstVar = directProd?.variants?.[0];
+            const clientPrice = firstVar?.prices?.find((p: any) => p.rol === 'cliente')?.precio;
 
-              <div className="pt-4 mt-6 border-t border-neon/15 flex items-center justify-between text-xs font-mono">
-                <span className="text-ice/70">Nivel 1 de Catálogo</span>
-                <span className="text-neon font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                  Abrir →
-                </span>
-              </div>
-            </Link>
-          ))}
+            const targetHref = isDirectPurchase
+              ? `/catalogo/${cat.slug}/${singleSub.slug}/${directProd.slug}`
+              : `/catalogo/${cat.slug}`;
+
+            return (
+              <Link
+                key={cat.id || cat.categoria_id}
+                href={targetHref}
+                className="cyber-panel rounded-2xl p-6 group hover:border-neon transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-navy border border-neon/30 flex items-center justify-center text-xl text-neon group-hover:scale-105 transition-transform overflow-hidden">
+                      {cat.imagen_url ? (
+                        <img src={cat.imagen_url} alt={cat.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        idx === 0 ? '💎' : idx === 1 ? '🎟️' : '🎮'
+                      )}
+                    </div>
+                    {clientPrice !== undefined && clientPrice !== null && Number(clientPrice) > 0 && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-mono font-black text-gold bg-gold/10 border border-gold/30">
+                        ${parseFloat(clientPrice).toFixed(2)} MXN
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold text-pure group-hover:text-neon transition-colors mb-2">
+                    {cat.nombre}
+                  </h3>
+                  <p className="text-xs text-ice/70 font-mono leading-relaxed line-clamp-2">
+                    {cat.descripcion || 'Entregas instantáneas y soporte garantizado.'}
+                  </p>
+                </div>
+
+                <div className="pt-4 mt-6 border-t border-neon/15 flex items-center justify-between text-xs font-mono">
+                  <span className="text-ice/70">
+                    {isDirectPurchase ? 'Compra Directa' : `${subs.length} Subcategorías`}
+                  </span>
+                  <span className="text-neon font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                    {isDirectPurchase ? 'Comprar Ahora →' : 'Explorar →'}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
