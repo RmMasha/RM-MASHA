@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { useAppearance } from '@/context/AppearanceContext';
 import {
@@ -17,6 +18,7 @@ import {
   Wallet,
   Shield,
   Trash2,
+  Disc,
 } from 'lucide-react';
 
 const DEFAULT_FACTORY_COLORS = {
@@ -243,6 +245,29 @@ export default function AdminAparienciaPage() {
 
       <form onSubmit={handleSave} className="space-y-6">
         
+        {/* ACCESO DIRECTO A INTRO & VINILO */}
+        <Link
+          href="/admin/intro"
+          className="cyber-panel rounded-2xl p-4 border-neon/30 hover:border-magenta/60 flex items-center justify-between group transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-magenta/20 border border-magenta/40 flex items-center justify-center text-magenta shrink-0">
+              <Disc className="w-5 h-5 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase group-hover:text-neon-cyan transition-colors">
+                Pantalla de Intro & Vinilo Temporal
+              </h3>
+              <p className="text-xs text-ice/70 font-sans">
+                Activa o desactiva la intro con música de fondo, sube pistas de audio e imagen del vinilo.
+              </p>
+            </div>
+          </div>
+          <span className="btn-neon-pill px-3 py-1 text-[11px] font-bold uppercase tracking-wider shrink-0">
+            Configurar Intro →
+          </span>
+        </Link>
+
         {/* ========================================================================= */}
         {/* SECCIÓN 1: GESTIÓN DE MARCA (LOGO & FAVICON)                              */}
         {/* ========================================================================= */}

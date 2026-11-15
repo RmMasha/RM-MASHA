@@ -7,6 +7,7 @@ import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import Snowfall from '@/components/common/Snowfall';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import VinylIntro from '@/components/common/VinylIntro';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -38,23 +39,25 @@ export default function RootLayout({
         {/* Proveedor de Estado Global de Autenticación y Apariencia */}
         <AppearanceProvider>
           <AuthProvider>
-            {/* Atmósfera global de copos de nieve y partículas luminosas por toda la página */}
-            <Snowfall count={54} />
+            <VinylIntro>
+              {/* Atmósfera global de copos de nieve y partículas luminosas por toda la página */}
+              <Snowfall count={54} />
 
-            <div className="relative z-10 flex flex-col min-h-screen">
-              {/* Barra de Navegación Minimalista Superior */}
-              <Navbar />
+              <div className="relative z-10 flex flex-col min-h-screen">
+                {/* Barra de Navegación Minimalista Superior */}
+                <Navbar />
 
-              {/* Contenedor Principal Aislado con Error Boundary */}
-              <main className="flex-1">
-                <ErrorBoundary fallbackTitle="Interferencia en Vista Principal">
-                  {children}
-                </ErrorBoundary>
-              </main>
+                {/* Contenedor Principal Aislado con Error Boundary */}
+                <main className="flex-1">
+                  <ErrorBoundary fallbackTitle="Interferencia en Vista Principal">
+                    {children}
+                  </ErrorBoundary>
+                </main>
 
-              {/* Pie de Página */}
-              <Footer />
-            </div>
+                {/* Pie de Página */}
+                <Footer />
+              </div>
+            </VinylIntro>
           </AuthProvider>
         </AppearanceProvider>
       </body>

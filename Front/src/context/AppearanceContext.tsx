@@ -25,6 +25,10 @@ const DEFAULT_SETTINGS: AppearanceSettings = {
   color_magenta: '#FF007F',
   color_ice: '#7DD3FC',
   color_gold: '#FBBF24',
+  intro_activo: true,
+  intro_audio_url: '/intro.mp3',
+  intro_imagen_url: '/RM&MASHA VINIL.jpg',
+  intro_duracion_segundos: 5,
 };
 
 const AppearanceContext = createContext<AppearanceContextType>({

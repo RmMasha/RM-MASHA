@@ -232,6 +232,10 @@ export interface AppearanceSettings {
   color_magenta: string;
   color_ice: string;
   color_gold: string;
+  intro_activo?: boolean;
+  intro_audio_url?: string | null;
+  intro_imagen_url?: string | null;
+  intro_duracion_segundos?: number;
   updated_at?: string;
 }
 

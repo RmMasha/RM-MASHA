@@ -68,6 +68,7 @@ export default function AdminLayout({ children }: Props) {
     { href: '/admin/redes', label: 'Redes Sociales', icon: '🌐' },
     { href: '/admin/notificaciones', label: 'Plantillas de Notificaciones', icon: '🔔' },
     { href: '/admin/apariencia', label: 'Apariencia & Marca', icon: '🎨' },
+    { href: '/admin/intro', label: 'Intro & Vinilo', icon: '🎵' },
   ];
 
   const currentSection =
