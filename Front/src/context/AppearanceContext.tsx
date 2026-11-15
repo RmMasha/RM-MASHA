@@ -26,9 +26,9 @@ const DEFAULT_SETTINGS: AppearanceSettings = {
   color_ice: '#7DD3FC',
   color_gold: '#FBBF24',
   intro_activo: true,
-  intro_audio_url: '/intro.mp3',
+  intro_audio_url: 'https://xvwcmcrfgrclhebbcrze.supabase.co/storage/v1/object/public/catalogo/branding/intro_audio_1794764578008.mp3',
   intro_imagen_url: '/RM&MASHA VINIL.jpg',
-  intro_duracion_segundos: 5,
+  intro_duracion_segundos: 12,
 };
 
 const AppearanceContext = createContext<AppearanceContextType>({

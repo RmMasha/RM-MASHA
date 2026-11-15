@@ -11,45 +11,61 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   const { settings, loading } = useAppearance();
   const [showVisual, setShowVisual] = useState(true);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [isAudioBlocked, setIsAudioBlocked] = useState(false);
+  const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioSrcRef = useRef<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasTimerStartedRef = useRef(false);
 
   // Configuración de la intro desde Supabase / AppearanceContext
   const isIntroEnabled = settings.intro_activo !== false;
-  // Usar la URL de audio configurada en el panel admin (de Supabase) o fallback local
+  // URL de audio configurada en el panel admin
   const audioSrc = settings.intro_audio_url || '/intro.mp3';
   const vinylSrc = settings.intro_imagen_url || '/RM&MASHA VINIL.jpg';
-  const durationSec = Math.max(1, Math.min(30, Number(settings.intro_duracion_segundos) || 5));
+  const durationSec = Math.max(1, Math.min(30, Number(settings.intro_duracion_segundos) || 12));
 
-  // Función para forzar la reproducción del audio
-  const startAudioPlayback = useCallback(() => {
+  // =========================================================================
+  // FUNCIÓN PARA INICIAR LA EXPERIENCIA: MÚSICA + TEMPORIZADOR EN SINCRONÍA
+  // =========================================================================
+  const startIntroExperience = useCallback(() => {
     if (typeof window === 'undefined') return;
-    if (!audioRef.current) return;
 
-    audioRef.current
-      .play()
-      .then(() => {
-        setIsAudioPlaying(true);
-        setIsAudioBlocked(false);
-      })
-      .catch((error) => {
-        console.warn('Autoplay bloqueado esperando interacción del usuario:', error);
-        setIsAudioBlocked(true);
-      });
-  }, []);
+    // 1. Iniciar reproducción de audio
+    if (audioRef.current) {
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsAudioPlaying(true);
+          setIsAutoplayBlocked(false);
+        })
+        .catch((err) => {
+          console.warn('Autoplay bloqueado esperando interacción del usuario:', err);
+          setIsAutoplayBlocked(true);
+        });
+    }
 
-  // Función para saltar la intro de inmediato
+    // 2. Iniciar el temporizador de la intro en el momento exacto en que arranca la experiencia
+    if (!hasTimerStartedRef.current) {
+      hasTimerStartedRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setShowVisual(false);
+      }, durationSec * 1000);
+    }
+  }, [durationSec]);
+
+  // =========================================================================
+  // BOTÓN SALTAR INTRO
+  // =========================================================================
   const handleSkip = useCallback(() => {
-    // Si el audio aún no había arrancado (por restricción de autoplay del navegador), este clic lo activa
+    // Si la música aún no estaba sonando, intentar arrancarla con este clic para que continúe
     if (audioRef.current && audioRef.current.paused) {
       audioRef.current
         .play()
         .then(() => {
           setIsAudioPlaying(true);
-          setIsAudioBlocked(false);
+          setIsAutoplayBlocked(false);
         })
         .catch(() => {});
     }
@@ -60,11 +76,11 @@ export default function VinylIntro({ children }: VinylIntroProps) {
       timerRef.current = null;
     }
     // CRÍTICO: NO pausar ni destruir audioRef.current.
-    // La música continúa sonando en segundo plano hasta que finalice naturalmente.
+    // La música continúa sonando en segundo plano hasta que termine naturalmente.
   }, []);
 
   // =========================================================================
-  // 1. SINCRONIZACIÓN Y REPRODUCCIÓN DEL AUDIO CONFIGURADO EN EL PANEL ADMIN
+  // 1. INSTANCIACIÓN Y CARGA DE LA PISTA DE AUDIO DEL PANEL ADMIN
   // =========================================================================
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -84,12 +100,13 @@ export default function VinylIntro({ children }: VinylIntroProps) {
 
       const newAudio = new Audio(audioSrc);
       newAudio.preload = 'auto';
+      newAudio.crossOrigin = 'anonymous';
       newAudio.volume = 1.0;
       audioRef.current = newAudio;
 
       newAudio.onplay = () => {
         setIsAudioPlaying(true);
-        setIsAudioBlocked(false);
+        setIsAutoplayBlocked(false);
       };
 
       newAudio.onpause = () => {
@@ -101,82 +118,71 @@ export default function VinylIntro({ children }: VinylIntroProps) {
       };
 
       newAudio.onerror = (e) => {
-        console.warn('Error al cargar la pista de audio de la intro:', audioSrc, e);
+        console.warn('Error al cargar pista de audio de la intro:', audioSrc, e);
       };
 
-      // Intentar reproducir inmediatamente
-      const playPromise = newAudio.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsAudioPlaying(true);
-            setIsAudioBlocked(false);
-          })
-          .catch((err) => {
-            console.warn('Navegador bloqueó autoplay sin interacción previa:', err);
-            setIsAudioBlocked(true);
-            setIsAudioPlaying(false);
-          });
-      }
-    }
-  }, [audioSrc, isIntroEnabled]);
-
-  // =========================================================================
-  // 2. DESBLOQUEO AUTOMÁTICO AL DETECTAR CUALQUIER INTERACCIÓN DEL USUARIO
-  // =========================================================================
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const unlockAndPlay = () => {
-      if (audioRef.current && audioRef.current.paused) {
-        audioRef.current
+      // Si la intro visual está activa, intentar reproducir inmediatamente al montar la página
+      if (showVisual) {
+        newAudio
           .play()
           .then(() => {
             setIsAudioPlaying(true);
-            setIsAudioBlocked(false);
+            setIsAutoplayBlocked(false);
+            // Si el navegador permitió autoplay, iniciar temporizador sincronizado
+            if (!hasTimerStartedRef.current) {
+              hasTimerStartedRef.current = true;
+              if (timerRef.current) clearTimeout(timerRef.current);
+              timerRef.current = setTimeout(() => {
+                setShowVisual(false);
+              }, durationSec * 1000);
+            }
           })
-          .catch(() => {});
+          .catch((err) => {
+            // El navegador bloqueó el autoplay sin interacción previa del usuario
+            console.warn('Autoplay con sonido restringido por el navegador. Esperando primer clic:', err);
+            setIsAutoplayBlocked(true);
+          });
       }
+    }
+  }, [audioSrc, isIntroEnabled, showVisual, durationSec]);
+
+  // =========================================================================
+  // 2. DETECTOR GLOBAL DE INTERACCIÓN: ACTIVO ÚNICAMENTE MIENTRAS LA INTRO ESTÉ VISIBLE
+  // =========================================================================
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Si la intro ya no está en pantalla, ¡NO escuchar eventos de interacción!
+    // Esto garantiza que la música NO arranque de la nada cuando ya estás viendo la tienda.
+    if (!showVisual || !isIntroEnabled) return;
+
+    const handleUserGesture = () => {
+      startIntroExperience();
     };
 
-    window.addEventListener('click', unlockAndPlay, { passive: true });
-    window.addEventListener('pointerdown', unlockAndPlay, { passive: true });
-    window.addEventListener('touchstart', unlockAndPlay, { passive: true });
-    window.addEventListener('keydown', unlockAndPlay, { passive: true });
+    window.addEventListener('click', handleUserGesture, { passive: true });
+    window.addEventListener('pointerdown', handleUserGesture, { passive: true });
+    window.addEventListener('touchstart', handleUserGesture, { passive: true });
+    window.addEventListener('keydown', handleUserGesture, { passive: true });
 
     return () => {
-      window.removeEventListener('click', unlockAndPlay);
-      window.removeEventListener('pointerdown', unlockAndPlay);
-      window.removeEventListener('touchstart', unlockAndPlay);
-      window.removeEventListener('keydown', unlockAndPlay);
+      window.removeEventListener('click', handleUserGesture);
+      window.removeEventListener('pointerdown', handleUserGesture);
+      window.removeEventListener('touchstart', handleUserGesture);
+      window.removeEventListener('keydown', handleUserGesture);
     };
-  }, []);
+  }, [showVisual, isIntroEnabled, startIntroExperience]);
 
-  // =========================================================================
-  // 3. TEMPORIZADOR DE DESMONTAJE VISUAL (DURACIÓN CONFIGURADA EN ADMIN)
-  // =========================================================================
+  // 3. Si la intro está desactivada en admin, desmontar visual de inmediato
   useEffect(() => {
     if (!loading && !isIntroEnabled) {
       setShowVisual(false);
-      return;
-    }
-
-    if (!showVisual) return;
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    timerRef.current = setTimeout(() => {
-      setShowVisual(false);
-    }, durationSec * 1000);
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+        } catch (_) {}
       }
-    };
-  }, [loading, isIntroEnabled, durationSec, showVisual]);
+    }
+  }, [loading, isIntroEnabled]);
 
   // 4. Atajo de teclado: Tecla Escape para saltar
   useEffect(() => {
@@ -212,8 +218,9 @@ export default function VinylIntro({ children }: VinylIntroProps) {
             justifyContent: 'center',
             overflow: 'hidden',
             userSelect: 'none',
+            cursor: 'pointer',
           }}
-          onClick={startAudioPlayback}
+          onClick={startIntroExperience}
         >
           {/* Fondo oficial de la tienda: gradiente radial atmosférico azul noche y neón */}
           <div
@@ -269,7 +276,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
                 }}
               >
                 <span style={{ fontSize: '13px' }}>🎵</span>
-                <span>Música Oficial</span>
+                <span>Música de la Intro</span>
                 <span
                   style={{
                     width: '6px',
@@ -285,7 +292,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  startAudioPlayback();
+                  startIntroExperience();
                 }}
                 style={{
                   display: 'flex',
@@ -315,7 +322,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
                 }}
               >
                 <span style={{ fontSize: '15px' }}>🔊</span>
-                <span>Activar Música</span>
+                <span>Toca para Activar Música</span>
               </button>
             )}
           </div>
@@ -405,7 +412,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                startAudioPlayback();
+                startIntroExperience();
               }}
             >
               <img
@@ -432,36 +439,63 @@ export default function VinylIntro({ children }: VinylIntroProps) {
               />
             </div>
 
-            {/* Insignia de carga con pulso cian */}
-            <div
-              style={{
-                marginTop: '22px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 18px',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(6, 9, 19, 0.9)',
-                border: '1px solid rgba(0, 210, 255, 0.35)',
-                color: '#7DD3FC',
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                boxShadow: '0 0 15px rgba(0, 210, 255, 0.2)',
-              }}
-            >
-              <span
+            {/* Aviso visual pulsante si el navegador bloqueó el autoplay */}
+            {isAutoplayBlocked && !isAudioPlaying ? (
+              <div
                 style={{
-                  width: '8px',
-                  height: '8px',
+                  marginTop: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 20px',
                   borderRadius: '9999px',
-                  backgroundColor: '#00F0FF',
-                  boxShadow: '0 0 10px #00F0FF',
+                  backgroundColor: 'rgba(255, 0, 127, 0.2)',
+                  border: '1.5px solid #FF007F',
+                  color: '#FFFFFF',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  letterSpacing: '1px',
+                  boxShadow: '0 0 20px rgba(255, 0, 128, 0.45)',
+                  animation: 'pulse 2s infinite',
                 }}
-              />
-              <span>RM & MASHA • INICIANDO</span>
-            </div>
+              >
+                <span>🔊</span>
+                <span>HAZ UN CLIC EN LA PANTALLA PARA INICIAR CON MÚSICA</span>
+                <span>🎵</span>
+              </div>
+            ) : (
+              /* Insignia de carga con pulso cian */
+              <div
+                style={{
+                  marginTop: '22px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 18px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(6, 9, 19, 0.9)',
+                  border: '1px solid rgba(0, 210, 255, 0.35)',
+                  color: '#7DD3FC',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  boxShadow: '0 0 15px rgba(0, 210, 255, 0.2)',
+                }}
+              >
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#00F0FF',
+                    boxShadow: '0 0 10px #00F0FF',
+                  }}
+                />
+                <span>RM & MASHA • INICIANDO</span>
+              </div>
+            )}
 
             {/* Botón secundario rápido para entrar de inmediato */}
             <button
