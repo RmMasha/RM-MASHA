@@ -13,7 +13,6 @@ import {
   Upload,
   Eye,
   Sliders,
-  Gem,
   ArrowRight,
   Wallet,
   Shield,
@@ -260,12 +259,12 @@ export default function AdminAparienciaPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-pitch-black border-2 border-neon-blue/50 flex items-center justify-center p-2 overflow-hidden shadow-neon-border shrink-0">
+              <div className="w-20 h-20 rounded-full bg-pitch-black border-2 border-neon-blue/50 flex items-center justify-center overflow-hidden shadow-neon-border shrink-0">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                  <img src={logoUrl} alt="Logo Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="text-center text-ice/50 font-mono text-[10px]">
-                    <Gem className="w-6 h-6 mx-auto mb-1 text-neon-blue" />
+                  <div className="text-center text-ice/50 font-mono text-[10px] flex flex-col items-center justify-center">
+                    <ImageIcon className="w-6 h-6 mb-1 text-neon-blue" />
                     <span>Sin Logo</span>
                   </div>
                 )}
@@ -331,11 +330,13 @@ export default function AdminAparienciaPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-pitch-black border-2 border-gold/50 flex items-center justify-center p-2 overflow-hidden shadow-[0_0_15px_rgba(251,191,36,0.2)] shrink-0">
+              <div className="w-14 h-14 rounded-full bg-pitch-black border-2 border-gold/50 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(251,191,36,0.2)] shrink-0">
                 {faviconUrl ? (
-                  <img src={faviconUrl} alt="Favicon Preview" className="w-8 h-8 object-contain" />
+                  <img src={faviconUrl} alt="Favicon Preview" className="w-full h-full object-cover" />
+                ) : logoUrl ? (
+                  <img src={logoUrl} alt="Logo como Favicon" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-xl">💎</span>
+                  <Sparkles className="w-5 h-5 text-gold/60" />
                 )}
               </div>
 

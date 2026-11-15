@@ -7,7 +7,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useAppearance } from '@/context/AppearanceContext';
 import { formatCurrency, getRoleBadgeColor, formatDate } from '@/lib/utils';
 import {
-  Gem,
   Wallet,
   Bell,
   User,
@@ -44,15 +43,17 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* BRAND LOGO */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 rounded-xl bg-pitch-panel border border-neon-blue/50 flex items-center justify-center shadow-neon-border group-hover:border-neon-cyan transition-all overflow-hidden">
+            <div className="relative w-10 h-10 rounded-full bg-pitch-panel border border-neon-blue/50 flex items-center justify-center shadow-neon-border group-hover:border-neon-cyan transition-all overflow-hidden shrink-0">
               {settings.logo_url ? (
                 <img
                   src={settings.logo_url}
-                  alt="RM & Masha"
-                  className="w-full h-full object-contain p-1"
+                  alt={settings.site_name || 'RM & MASHA'}
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <Gem className="w-5 h-5 text-neon-blue group-hover:scale-110 transition-transform" />
+                <div className="w-full h-full rounded-full bg-gradient-to-tr from-cyan-600/30 to-blue-600/30 flex items-center justify-center text-white text-xs font-black tracking-tight">
+                  RM
+                </div>
               )}
             </div>
             <div className="flex flex-col">

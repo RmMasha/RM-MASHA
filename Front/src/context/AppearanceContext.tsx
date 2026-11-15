@@ -49,18 +49,19 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
     root.style.setProperty('--ice-blue', current.color_ice || '#7DD3FC');
     root.style.setProperty('--gold', current.color_gold || '#FBBF24');
 
-    // Actualizar Favicon en el navegador si está configurado
-    if (current.favicon_url) {
+    // Actualizar Favicon en el navegador si está configurado (o usar el logo como favicon)
+    const activeFavicon = current.favicon_url || current.logo_url;
+    if (activeFavicon) {
       const selectors = ["link[rel~='icon']", "link[rel='shortcut icon']", "link[rel='icon']"];
       const existing = document.querySelectorAll<HTMLLinkElement>(selectors.join(','));
       if (existing.length === 0) {
         const link = document.createElement('link');
         link.rel = 'icon';
-        link.href = current.favicon_url;
+        link.href = activeFavicon;
         document.head.appendChild(link);
       } else {
         existing.forEach((link) => {
-          link.href = current.favicon_url!;
+          link.href = activeFavicon;
         });
       }
     }

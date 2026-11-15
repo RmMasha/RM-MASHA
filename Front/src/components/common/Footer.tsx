@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase/client';
 import { useAppearance } from '@/context/AppearanceContext';
 import { SocialLink } from '@/types/database.types';
 import {
-  Gem,
   MessageCircle,
   Send,
   Video,
@@ -129,15 +128,17 @@ export function Footer() {
           {/* BRAND */}
           <div className="space-y-4 md:col-span-1">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-pitch-black border border-neon-blue/50 flex items-center justify-center text-neon-blue shadow-neon-border overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-pitch-black border border-neon-blue/50 flex items-center justify-center shadow-neon-border overflow-hidden shrink-0">
                 {settings.logo_url ? (
                   <img
                     src={settings.logo_url}
                     alt={storeName}
-                    className="w-full h-full object-contain p-1"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Gem className="w-4 h-4" />
+                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-cyan-600/30 to-blue-600/30 flex items-center justify-center text-white text-[10px] font-black">
+                    RM
+                  </div>
                 )}
               </div>
               <span className="font-black text-lg tracking-tight text-white flex items-center gap-1.5">

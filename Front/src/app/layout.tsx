@@ -20,6 +20,11 @@ export const metadata: Metadata = {
     description: 'Recarga diamantes al mejor precio con entrega inmediata y sistema de billetera automatizada.',
     type: 'website',
   },
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
