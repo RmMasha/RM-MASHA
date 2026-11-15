@@ -14,82 +14,147 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasStartedPlaybackRef = useRef(false);
+  const listenersCleanedRef = useRef(false);
 
   // Configuración de la intro desde Supabase / AppearanceContext
   const isIntroEnabled = settings.intro_activo !== false;
-  const audioSrc = settings.intro_audio_url || '/intro.mp3';
+
+  // Fuente de audio:
+  // Si la pista configurada en Supabase es la pista de la marca (intro_audio_1794764578008.mp3) o está vacía,
+  // se utiliza la copia local /intro.mp3 (157 KB idéntica) que carga con 0 ms de latencia instantánea.
+  // Si en el panel admin se configuró una URL externa distinta, se usa esa URL con fallback a /intro.mp3.
+  const configuredAudio = settings.intro_audio_url;
+  const isDefaultOrLocal =
+    !configuredAudio ||
+    configuredAudio.includes('intro_audio_1794764578008.mp3') ||
+    configuredAudio === '/intro.mp3';
+
+  const audioSrc = isDefaultOrLocal ? '/intro.mp3' : configuredAudio;
   const vinylSrc = settings.intro_imagen_url || '/RM&MASHA VINIL.jpg';
   const durationSec = Math.max(1, Math.min(30, Number(settings.intro_duracion_segundos) || 12));
 
   // =========================================================================
-  // BOTÓN SALTAR INTRO
+  // LIMPIEZA DE EVENT LISTENERS DE GESTO DEL USUARIO
+  // =========================================================================
+  const detachListeners = useCallback(() => {
+    if (listenersCleanedRef.current) return;
+    listenersCleanedRef.current = true;
+    window.removeEventListener('pointerdown', handleUserInteraction, true);
+    window.removeEventListener('touchstart', handleUserInteraction, true);
+    window.removeEventListener('click', handleUserInteraction, true);
+    window.removeEventListener('keydown', handleUserInteraction, true);
+  }, []);
+
+  // =========================================================================
+  // INTENTO DE REPRODUCCIÓN AUTOMÁTICA
+  // =========================================================================
+  const attemptPlay = useCallback(() => {
+    if (hasStartedPlaybackRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.volume = 1.0;
+    audio.loop = false; // Solo debe reproducirse 1 vez
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          hasStartedPlaybackRef.current = true;
+          detachListeners();
+        })
+        .catch(() => {
+          // Si el navegador bloquea la reproducción sin interacción previa (Autoplay Policy),
+          // los listeners globales capturarán el primer clic o toque en la pantalla para iniciarla.
+        });
+    }
+  }, [detachListeners]);
+
+  // Gestor de interacción: cualquier toque, clic o pulsación arranca el audio al instante
+  const handleUserInteraction = useCallback(() => {
+    if (hasStartedPlaybackRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          hasStartedPlaybackRef.current = true;
+          detachListeners();
+        })
+        .catch(() => {
+          // Si por alguna razón falla, se mantienen los listeners para el siguiente toque
+        });
+    }
+  }, [detachListeners]);
+
+  // =========================================================================
+  // BOTÓN SALTAR INTRO (ÚNICO BOTÓN VISIBLE EN LA PANTALLA)
   // =========================================================================
   const handleSkip = useCallback(() => {
     // Si aún no arrancó la música, este clic garantiza que inicie
-    if (audioRef.current && audioRef.current.paused && !hasStartedPlaybackRef.current) {
+    if (!hasStartedPlaybackRef.current && audioRef.current) {
       hasStartedPlaybackRef.current = true;
       audioRef.current.play().catch(() => {});
     }
 
+    detachListeners();
     setShowVisual(false);
+
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
     // La música continúa sonando en segundo plano hasta finalizar (1 sola vez, loop = false)
-  }, []);
+  }, [detachListeners]);
 
   // =========================================================================
-  // 1. REPRODUCCIÓN AUTOMÁTICA (1 SOLA VEZ, SIN BOTONES MANUALES)
+  // 1. INICIALIZACIÓN DEL OBJETO AUDIO Y REPRODUCCIÓN AUTOMÁTICA
   // =========================================================================
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!isIntroEnabled) return;
 
-    const audio = audioRef.current;
-    if (!audio) return;
+    listenersCleanedRef.current = false;
 
-    audio.volume = 1.0;
-    audio.loop = false; // Solo reproducirse 1 vez
+    // Instanciar o actualizar la pista de Audio usando useRef para evitar duplicados en Strict Mode
+    if (!audioRef.current) {
+      const audio = new Audio(audioSrc);
+      audio.volume = 1.0;
+      audio.loop = false;
+      audio.preload = 'auto';
 
-    // Intentar reproducir automáticamente de inmediato
-    const attemptAutoPlay = () => {
-      if (hasStartedPlaybackRef.current) return;
+      audio.onerror = () => {
+        // En caso de error de red con la URL remota, rescate inmediato con la pista local
+        if (audio.src !== window.location.origin + '/intro.mp3') {
+          audio.src = '/intro.mp3';
+          audio.load();
+          if (hasStartedPlaybackRef.current) {
+            audio.play().catch(() => {});
+          }
+        }
+      };
 
-      const promise = audio.play();
-      if (promise !== undefined) {
-        promise
-          .then(() => {
-            hasStartedPlaybackRef.current = true;
-          })
-          .catch(() => {
-            // Si las políticas de seguridad del navegador restringen el sonido en el frame 0,
-            // se desbloquea de forma 100% invisible y automática con el primer movimiento
-            // del ratón, toque en pantalla o pulsación de tecla, sin requerir ningún botón.
-            const autoUnlock = () => {
-              if (!hasStartedPlaybackRef.current && audioRef.current) {
-                audioRef.current.play().then(() => {
-                  hasStartedPlaybackRef.current = true;
-                }).catch(() => {});
-              }
-              window.removeEventListener('mousemove', autoUnlock);
-              window.removeEventListener('pointerdown', autoUnlock);
-              window.removeEventListener('touchstart', autoUnlock);
-              window.removeEventListener('keydown', autoUnlock);
-              window.removeEventListener('scroll', autoUnlock);
-            };
+      audioRef.current = audio;
+    } else if (audioRef.current.src !== audioSrc && !hasStartedPlaybackRef.current) {
+      audioRef.current.src = audioSrc;
+      audioRef.current.load();
+    }
 
-            window.addEventListener('mousemove', autoUnlock, { once: true });
-            window.addEventListener('pointerdown', autoUnlock, { once: true });
-            window.addEventListener('touchstart', autoUnlock, { once: true });
-            window.addEventListener('keydown', autoUnlock, { once: true });
-            window.addEventListener('scroll', autoUnlock, { once: true });
-          });
-      }
+    // Intentar reproducción automática de inmediato en el frame 0
+    attemptPlay();
+
+    // Activar listeners globales con fase de captura para arrancar con el primer clic/toque en cualquier parte
+    window.addEventListener('pointerdown', handleUserInteraction, true);
+    window.addEventListener('touchstart', handleUserInteraction, true);
+    window.addEventListener('click', handleUserInteraction, true);
+    window.addEventListener('keydown', handleUserInteraction, true);
+
+    return () => {
+      detachListeners();
     };
-
-    attemptAutoPlay();
-  }, [audioSrc, isIntroEnabled]);
+  }, [audioSrc, isIntroEnabled, attemptPlay, handleUserInteraction, detachListeners]);
 
   // =========================================================================
   // 2. TEMPORIZADOR DE LA INTRO (DURACIÓN CONFIGURADA EN ADMIN)
@@ -97,6 +162,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   useEffect(() => {
     if (!loading && !isIntroEnabled) {
       setShowVisual(false);
+      detachListeners();
       return;
     }
 
@@ -105,12 +171,18 @@ export default function VinylIntro({ children }: VinylIntroProps) {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setShowVisual(false);
+
+      // Si la intro visual terminó y la música nunca arrancó (por ejemplo, usuario ausente),
+      // desarmar listeners para que la música NO arranque inesperadamente más tarde en la tienda.
+      if (!hasStartedPlaybackRef.current) {
+        detachListeners();
+      }
     }, durationSec * 1000);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [loading, isIntroEnabled, durationSec, showVisual]);
+  }, [loading, isIntroEnabled, durationSec, showVisual, detachListeners]);
 
   // 3. Atajo de teclado: Tecla Escape para saltar
   useEffect(() => {
@@ -125,20 +197,13 @@ export default function VinylIntro({ children }: VinylIntroProps) {
 
   return (
     <>
-      {/* Elemento de audio nativo configurado para reproducción automática única */}
-      <audio
-        ref={audioRef}
-        src={audioSrc}
-        autoPlay
-        playsInline
-        preload="auto"
-      />
-
       {/* ========================================================================= */}
       {/* PANTALLA DE INTRODUCCIÓN VISUAL TEMPORAL: FIJA, CENTRADA Y CON BOTÓN SALTAR */}
       {/* ========================================================================= */}
       {showVisual && isIntroEnabled && (
         <div
+          onPointerDown={handleUserInteraction}
+          onClick={handleUserInteraction}
           style={{
             position: 'fixed',
             top: 0,
@@ -155,6 +220,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
             justifyContent: 'center',
             overflow: 'hidden',
             userSelect: 'none',
+            cursor: 'default',
           }}
         >
           {/* Fondo oficial de la tienda: gradiente radial atmosférico azul noche y neón */}
@@ -182,7 +248,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
           />
 
           {/* ========================================================================= */}
-          {/* BOTÓN SALTAR INTRO EN LA ESQUINA SUPERIOR DERECHA                         */}
+          {/* ÚNICO BOTÓN: SALTAR INTRO EN LA ESQUINA SUPERIOR DERECHA                   */}
           {/* ========================================================================= */}
           <button
             type="button"
