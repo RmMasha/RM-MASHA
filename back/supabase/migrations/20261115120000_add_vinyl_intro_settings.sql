@@ -14,3 +14,4 @@ SET
   intro_imagen_url = COALESCE(intro_imagen_url, '/RM&MASHA VINIL.jpg'),
   intro_duracion_segundos = COALESCE(intro_duracion_segundos, 5)
 WHERE id = 'global';
+

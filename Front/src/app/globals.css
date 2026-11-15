@@ -469,3 +469,21 @@ textarea::placeholder {
 .animate-ambient-flash {
   animation: cyberAmbientFlash 6.2s infinite ease-in-out;
 }
+
+/* ========================================================= */
+/* ANIMACIÓN DE ROTACIÓN SUAVE DEL VINILO (OPTIMIZADA POR GPU) */
+/* ========================================================= */
+@keyframes vinylSpinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-vinyl-spin {
+  animation: vinylSpinSlow 8s linear infinite !important;
+  will-change: transform;
+  transform-origin: center center;
+}

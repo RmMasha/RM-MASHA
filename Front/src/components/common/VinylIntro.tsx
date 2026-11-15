@@ -56,11 +56,11 @@ export default function VinylIntro({ children }: VinylIntroProps) {
     };
   }, [loading, isIntroEnabled, audioSrc]);
 
-  // Si la intro visual está activa y no está deshabilitada, renderizar la pantalla completa del vinilo
+  // Si la intro visual está activa y no está deshabilitada, renderizar la pantalla del vinilo con el fondo de la tienda
   if (showVisual && isIntroEnabled) {
     return (
       <div
-        className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex items-center justify-center select-none overflow-hidden cursor-pointer"
+        className="fixed inset-0 z-[9999] bg-[#050811] flex flex-col items-center justify-center select-none overflow-hidden cursor-pointer"
         onClick={() => {
           // Permite activar el audio con clic de usuario si el navegador bloqueó el autoplay
           if (audioRef.current && audioRef.current.paused) {
@@ -68,18 +68,34 @@ export default function VinylIntro({ children }: VinylIntroProps) {
           }
         }}
       >
-        <img
-          src={vinylSrc}
-          alt="RM & MASHA Vinilo"
-          className="w-56 h-56 sm:w-72 sm:h-72 object-cover rounded-full shadow-[0_0_40px_rgba(255,0,128,0.3)] animate-[spin_2s_linear_infinite] pointer-events-none"
-          onError={(e) => {
-            // Fallback en caso de caracteres especiales de URL
-            const target = e.currentTarget;
-            if (target.src !== encodeURI(vinylSrc)) {
-              target.src = encodeURI(vinylSrc);
-            }
-          }}
-        />
+        {/* Fondo oficial por defecto de la página: atmósfera azul marino profundo con resplandores neón */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.14)_0%,rgba(7,11,25,0.96)_65%,#050811_100%)] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-magenta/10 rounded-full blur-[110px] pointer-events-none" />
+
+        {/* Contenedor Principal del Vinilo Mejorado para PC y Móvil */}
+        <div className="relative z-10 flex flex-col items-center justify-center p-4">
+          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[400px] lg:h-[400px] rounded-full overflow-hidden shadow-[0_0_50px_rgba(255,0,128,0.35),0_0_80px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
+            <img
+              src={vinylSrc}
+              alt="RM & MASHA Vinilo"
+              className="w-full h-full object-cover rounded-full pointer-events-none select-none animate-vinyl-spin"
+              style={{ clipPath: 'circle(50% at 50% 50%)' }}
+              onError={(e) => {
+                // Fallback en caso de caracteres especiales de URL
+                const target = e.currentTarget;
+                if (target.src !== encodeURI(vinylSrc)) {
+                  target.src = encodeURI(vinylSrc);
+                }
+              }}
+            />
+          </div>
+
+          {/* Sutil insignia de bienvenida */}
+          <div className="mt-6 flex items-center gap-2 px-4 py-1.5 rounded-full bg-pitch-panel/90 border border-neon-blue/30 backdrop-blur-md shadow-neon-border text-xs font-mono text-ice/90 animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-neon-cyan animate-ping" />
+            <span className="tracking-widest uppercase text-[11px] font-bold">RM & MASHA • INICIANDO</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -87,3 +103,4 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   // Pasados los 5 segundos o si está desactivada, renderizar en su lugar el {children}
   return <>{children}</>;
 }
+

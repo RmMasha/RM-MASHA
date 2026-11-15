@@ -390,12 +390,14 @@ export default function AdminIntroPage() {
           </div>
 
           {/* Simulación visual en tiempo real */}
-          <div className="p-6 rounded-2xl bg-[#0a0a0a] border border-magenta/30 flex flex-col items-center justify-center text-center space-y-3 relative overflow-hidden">
-            <div className="relative">
+          <div className="p-6 rounded-2xl bg-[#050811] border border-magenta/30 flex flex-col items-center justify-center text-center space-y-3 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.1)_0%,rgba(7,11,25,0.95)_70%,#050811_100%)] pointer-events-none" />
+            <div className="relative z-10 w-44 h-44 rounded-full overflow-hidden shadow-[0_0_40px_rgba(255,0,128,0.35),0_0_60px_rgba(0,210,255,0.2)] border-2 border-magenta/40 bg-[#060913] flex items-center justify-center">
               <img
                 src={introImagenUrl}
                 alt="Vinilo Preview"
-                className="w-36 h-36 object-cover rounded-full shadow-[0_0_40px_rgba(255,0,128,0.3)] animate-[spin_2s_linear_infinite]"
+                className="w-full h-full object-cover rounded-full animate-vinyl-spin select-none"
+                style={{ clipPath: 'circle(50% at 50% 50%)' }}
                 onError={(e) => {
                   const target = e.currentTarget;
                   if (target.src !== encodeURI(introImagenUrl)) {
@@ -404,8 +406,8 @@ export default function AdminIntroPage() {
                 }}
               />
             </div>
-            <span className="text-[10px] text-ice/60 font-mono">
-              Simulación: rounded-full • shadow-[0_0_40px_rgba(255,0,128,0.3)] • animate-[spin_2s_linear_infinite]
+            <span className="relative z-10 text-[10px] text-ice/70 font-mono">
+              Giro fluido y pausado • Fondo oficial • Sombra Neón Fucsia y Cyan
             </span>
           </div>
 
@@ -451,24 +453,35 @@ export default function AdminIntroPage() {
       {/* ========================================================================= */}
       {showLivePreview && (
         <div
-          className="fixed inset-0 z-[10000] bg-[#0a0a0a] flex flex-col items-center justify-center select-none overflow-hidden"
+          className="fixed inset-0 z-[10000] bg-[#050811] flex flex-col items-center justify-center select-none overflow-hidden cursor-pointer"
           onClick={() => setShowLivePreview(false)}
         >
-          <img
-            src={introImagenUrl}
-            alt="RM & MASHA Vinilo Live Preview"
-            className="w-56 h-56 sm:w-72 sm:h-72 object-cover rounded-full shadow-[0_0_40px_rgba(255,0,128,0.3)] animate-[spin_2s_linear_infinite] pointer-events-none"
-            onError={(e) => {
-              const target = e.currentTarget;
-              target.src = encodeURI(introImagenUrl);
-            }}
-          />
-          <div className="absolute bottom-10 px-4 py-1.5 rounded-full bg-pitch-panel/90 border border-neon/30 text-[11px] text-ice font-mono flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-magenta animate-ping" />
-            <span>Previsualización en vivo (se cerrará automáticamente en 5s o haz clic para cerrar)</span>
+          {/* Fondo oficial de la tienda */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.14)_0%,rgba(7,11,25,0.96)_65%,#050811_100%)] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-magenta/10 rounded-full blur-[110px] pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col items-center justify-center p-4">
+            <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[400px] lg:h-[400px] rounded-full overflow-hidden shadow-[0_0_50px_rgba(255,0,128,0.35),0_0_80px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
+              <img
+                src={introImagenUrl}
+                alt="RM & MASHA Vinilo Live Preview"
+                className="w-full h-full object-cover rounded-full pointer-events-none select-none animate-vinyl-spin"
+                style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.src = encodeURI(introImagenUrl);
+                }}
+              />
+            </div>
+
+            <div className="mt-8 px-5 py-2 rounded-full bg-pitch-panel/90 border border-neon-blue/30 text-[11px] text-ice font-mono flex items-center gap-2 shadow-neon-border animate-pulse">
+              <span className="w-2.5 h-2.5 rounded-full bg-magenta animate-ping" />
+              <span>Prueba de Intro (5s) • Haz clic para cerrar</span>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+
