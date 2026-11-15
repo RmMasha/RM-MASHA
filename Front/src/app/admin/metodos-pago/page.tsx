@@ -12,6 +12,9 @@ export default function AdminMetodosPagoPage() {
   // Formulario: Creación / Edición
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nombre, setNombre] = useState('');
+  const [titular, setTitular] = useState('');
+  const [numeroCuenta, setNumeroCuenta] = useState('');
+  const [instrucciones, setInstrucciones] = useState('');
   const [formato, setFormato] = useState<'solo_numeros' | 'solo_letras' | 'alfanumerico'>('solo_numeros');
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -69,6 +72,9 @@ export default function AdminMetodosPagoPage() {
     const methodId = method.id || method.metodo_id || '';
     setEditingId(methodId);
     setNombre(method.nombre_metodo || '');
+    setTitular(method.titular || '');
+    setNumeroCuenta(method.numero_cuenta_o_dato || '');
+    setInstrucciones(method.instrucciones || '');
     setFormato((method.formato_requerido as any) || 'solo_numeros');
     setLogoUrl(method.logo_url || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -78,6 +84,9 @@ export default function AdminMetodosPagoPage() {
   const handleCancelEdit = () => {
     setEditingId(null);
     setNombre('');
+    setTitular('');
+    setNumeroCuenta('');
+    setInstrucciones('');
     setFormato('solo_numeros');
     setLogoUrl('');
   };
@@ -148,6 +157,9 @@ export default function AdminMetodosPagoPage() {
           .from('payment_methods')
           .update({
             nombre_metodo: nombre.trim(),
+            titular: titular.trim() || null,
+            numero_cuenta_o_dato: numeroCuenta.trim() || null,
+            instrucciones: instrucciones.trim() || null,
             formato_requerido: formato,
             logo_url: logoUrl.trim() || null,
           })
@@ -159,6 +171,9 @@ export default function AdminMetodosPagoPage() {
         // MODO CREACIÓN
         const { error } = await supabase.from('payment_methods').insert({
           nombre_metodo: nombre.trim(),
+          titular: titular.trim() || null,
+          numero_cuenta_o_dato: numeroCuenta.trim() || null,
+          instrucciones: instrucciones.trim() || null,
           formato_requerido: formato,
           logo_url: logoUrl.trim() || null,
           activo: true,
@@ -166,6 +181,9 @@ export default function AdminMetodosPagoPage() {
 
         if (error) throw error;
         setNombre('');
+        setTitular('');
+        setNumeroCuenta('');
+        setInstrucciones('');
         setLogoUrl('');
       }
 
@@ -219,7 +237,7 @@ export default function AdminMetodosPagoPage() {
               <input
                 type="text"
                 required
-                placeholder="Ej: Binance Pay (USDT)"
+                placeholder="Ej: Transferencia SPEI / OXXO / Mercado Pago (MXN)"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
@@ -235,10 +253,49 @@ export default function AdminMetodosPagoPage() {
                 onChange={(e) => setFormato(e.target.value as any)}
                 className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
               >
-                <option value="solo_numeros">Solo Números (Ej: Pago Móvil / Depósito)</option>
-                <option value="alfanumerico">Alfanumérico (Ej: Binance TxID / Hash)</option>
+                <option value="solo_numeros">Solo Números (Ej: Pago Móvil / Depósito SPEI)</option>
+                <option value="alfanumerico">Alfanumérico (Ej: Folio Bancario / Hash)</option>
                 <option value="solo_letras">Solo Letras</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-gold mb-1">
+                Titular / Beneficiario de la Cuenta:
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: Carlos La Rosa o RM & MASHA Oficial"
+                value={titular}
+                onChange={(e) => setTitular(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-gold/40 text-pure text-xs font-mono focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-gold mb-1">
+                Número de Cuenta / CLABE (18 dígitos) / Teléfono / Correo:
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: 012180015678901234 (CLABE SPEI) o 5512345678"
+                value={numeroCuenta}
+                onChange={(e) => setNumeroCuenta(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-gold/40 text-pure text-xs font-mono focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono uppercase text-ice mb-1">
+                Instrucciones de Transferencia para el Cliente:
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Ej: Transferir monto exacto en pesos mexicanos (MXN). En concepto pon tu ID de usuario. No agregar palabras como Free Fire."
+                value={instrucciones}
+                onChange={(e) => setInstrucciones(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon resize-none"
+              />
             </div>
 
             <div>
@@ -351,52 +408,64 @@ export default function AdminMetodosPagoPage() {
                       )}
                       <div className="min-w-0">
                         <h3 className="font-bold text-pure text-sm truncate">{m.nombre_metodo}</h3>
-                        <div className="text-[11px] font-mono text-ice/70 flex items-center gap-2 mt-0.5">
-                          <span>Validación:</span>
-                          <span className="text-neon">{m.formato_requerido}</span>
+                        <div className="text-[11px] font-mono text-ice/70 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                          <span>Validación: <strong className="text-neon">{m.formato_requerido}</strong></span>
+                          {m.titular && <span>Titular: <strong className="text-pure">{m.titular}</strong></span>}
+                          {m.numero_cuenta_o_dato && <span>Dato/Cuenta: <strong className="text-gold">{m.numero_cuenta_o_dato}</strong></span>}
                         </div>
+                        {m.instrucciones && (
+                          <p className="text-[10px] font-mono text-ice/60 mt-1 line-clamp-1 italic">
+                            Instrucciones: {m.instrucciones}
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end shrink-0">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold ${m.activo
-                            ? 'bg-neon/15 text-neon border border-neon/30'
-                            : 'bg-magenta/15 text-magenta border border-magenta/30'
-                          }`}
-                      >
-                        {m.activo ? 'Activo' : 'Inactivo'}
-                      </span>
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-end shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-neon/15">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold ${m.activo
+                              ? 'bg-neon/15 text-neon border border-neon/30'
+                              : 'bg-magenta/15 text-magenta border border-magenta/30'
+                            }`}
+                        >
+                          {m.activo ? 'Activo' : 'Inactivo'}
+                        </span>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(methodId, m.activo)}
-                        className="btn-ice-pill px-2.5 py-1 text-[11px] font-mono uppercase"
-                        title={m.activo ? 'Desactivar canal' : 'Activar canal'}
-                      >
-                        {m.activo ? 'Desactivar' : 'Activar'}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(methodId, m.activo)}
+                          className="btn-ice-pill px-2.5 py-1 text-[11px] font-mono uppercase"
+                          title={m.activo ? 'Desactivar canal' : 'Activar canal'}
+                        >
+                          {m.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleStartEdit(m)}
-                        className={`p-1.5 rounded-lg border text-xs transition-colors ${isCurrentEditing
-                            ? 'bg-gold/20 text-gold border-gold'
-                            : 'bg-pitch border-neon/30 text-ice hover:text-white hover:border-neon'
-                          }`}
-                        title="Editar método de pago"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(m)}
+                          className={`px-2.5 py-1 rounded-lg border text-xs font-mono inline-flex items-center gap-1 transition-colors ${isCurrentEditing
+                              ? 'bg-gold/20 text-gold border-gold'
+                              : 'bg-pitch border-neon/30 text-ice hover:text-white hover:border-neon'
+                            }`}
+                          title="Editar método de pago"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Editar</span>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMethod(methodId, m.nombre_metodo)}
-                        className="p-1.5 rounded-lg bg-magenta/15 border border-magenta/30 text-magenta hover:bg-magenta hover:text-white text-xs transition-colors"
-                        title="Eliminar método definitivamente"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMethod(methodId, m.nombre_metodo)}
+                          className="px-2.5 py-1 rounded-lg bg-magenta/15 border border-magenta/30 text-magenta hover:bg-magenta hover:text-white text-xs font-mono inline-flex items-center gap-1 transition-colors"
+                          title="Eliminar método definitivamente"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

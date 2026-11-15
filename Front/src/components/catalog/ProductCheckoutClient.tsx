@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { Product, Variant, Price, ProductRequirement, PaymentMethod, Review } from '@/types/database.types';
 import { formatCurrency, getRoleBadge, validatePaymentReference } from '@/lib/utils';
+import { Copy, Check } from 'lucide-react';
 
 interface VariantWithPrices extends Variant {
   prices: Price[];
@@ -49,6 +50,14 @@ export default function ProductCheckoutClient({
   const selectedMethod = paymentMethods.find((m) => (m.id || m.metodo_id) === selectedMethodId);
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [referenciaText, setReferenciaText] = useState<string>('');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, fieldKey: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldKey);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Datos de requisitos del producto (e.g. ID de Jugador, Nickname)
   const [requirementValues, setRequirementValues] = useState<Record<string, string>>({});
@@ -505,6 +514,104 @@ export default function ProductCheckoutClient({
                       })}
                     </select>
                   </div>
+
+                  {/* DATOS OFICIALES PARA TRANSFERIR EN PESOS MEXICANOS (MXN) */}
+                  {selectedMethod && (
+                    <div className="p-3.5 rounded-xl bg-pitch/90 border border-gold/40 space-y-2.5 text-xs font-mono animate-fadeIn">
+                      <div className="flex items-center justify-between border-b border-gold/20 pb-2">
+                        <div className="flex items-center gap-2">
+                          {selectedMethod.logo_url ? (
+                            <img
+                              src={selectedMethod.logo_url}
+                              alt={selectedMethod.nombre_metodo}
+                              className="w-6 h-6 object-contain rounded bg-navy p-0.5 border border-gold/30 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded bg-navy border border-gold/30 flex items-center justify-center text-xs shrink-0">
+                              🏦
+                            </div>
+                          )}
+                          <span className="font-bold text-pure text-xs">{selectedMethod.nombre_metodo}</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/30 font-bold uppercase">
+                          $ MXN
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {/* Monto exacto */}
+                        <div className="p-2 rounded-lg bg-navy/60 border border-neon/20 flex items-center justify-between">
+                          <span className="text-[10px] text-ice/70 uppercase">Monto a Transferir:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-gold">
+                              {formatCurrency(currentPrice)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(currentPrice.toFixed(2), 'monto')}
+                              className="px-1.5 py-0.5 rounded bg-pitch border border-gold/30 text-[9px] text-gold hover:bg-gold hover:text-pitch transition-colors flex items-center gap-1"
+                              title="Copiar monto"
+                            >
+                              {copiedField === 'monto' ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                              <span>{copiedField === 'monto' ? 'Copiado' : 'Copiar'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Titular */}
+                        {selectedMethod.titular && (
+                          <div className="p-2 rounded-lg bg-navy/60 border border-neon/20 flex items-center justify-between">
+                            <span className="text-[10px] text-ice/70 uppercase">Titular:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-pure truncate max-w-[140px]" title={selectedMethod.titular}>
+                                {selectedMethod.titular}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyText(selectedMethod.titular!, 'titular')}
+                                className="px-1.5 py-0.5 rounded bg-pitch border border-neon/30 text-[9px] text-neon hover:bg-neon hover:text-pitch transition-colors flex items-center gap-1 shrink-0"
+                                title="Copiar titular"
+                              >
+                                {copiedField === 'titular' ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                                <span>{copiedField === 'titular' ? 'Copiado' : 'Copiar'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Cuenta / CLABE */}
+                        {selectedMethod.numero_cuenta_o_dato && (
+                          <div className="p-2 rounded-lg bg-navy/80 border border-gold/30 flex items-center justify-between">
+                            <div className="min-w-0 mr-2">
+                              <span className="text-[9px] text-gold uppercase block font-bold">
+                                Cuenta / CLABE (MXN):
+                              </span>
+                              <span className="text-xs font-bold text-pure select-all break-all">
+                                {selectedMethod.numero_cuenta_o_dato}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(selectedMethod.numero_cuenta_o_dato!, 'cuenta')}
+                              className="px-2 py-1 rounded bg-gold text-pitch font-bold text-[10px] uppercase hover:bg-yellow-400 transition-colors flex items-center gap-1 shrink-0 shadow-sm"
+                              title="Copiar cuenta"
+                            >
+                              {copiedField === 'cuenta' ? <Check className="w-3 h-3 text-black" /> : <Copy className="w-3 h-3" />}
+                              <span>{copiedField === 'cuenta' ? 'Copiado' : 'Copiar'}</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Instrucciones */}
+                        {selectedMethod.instrucciones && (
+                          <div className="p-2 rounded-lg bg-pitch border border-neon/20 text-[10px] text-ice/90 leading-relaxed whitespace-pre-line">
+                            <span className="text-gold font-bold uppercase block mb-0.5">Instrucciones:</span>
+                            {selectedMethod.instrucciones}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Número de Referencia */}
                   <div>

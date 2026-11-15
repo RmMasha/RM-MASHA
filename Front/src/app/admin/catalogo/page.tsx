@@ -295,7 +295,7 @@ export default function AdminCatalogoPage() {
   // ==========================================
   // MANEJADORES DE APERTURA DE MODAL CRUD
   // ==========================================
-  const openModal = (
+  const openModal = async (
     level: 'category' | 'subcategory' | 'product' | 'variant',
     mode: 'create' | 'edit',
     existingItem?: any
@@ -364,25 +364,47 @@ export default function AdminCatalogoPage() {
       setFormImageUrl(existingItem.imagen_url || '');
       setFormActivo(existingItem.activo !== false);
 
-      // Si es producto y tiene variantes con precios, precargar
-      if (level === 'product' && variants.length > 0) {
-        const vId = variants[0].id || variants[0].variante_id || '';
-        const loadedPrices: Record<UserRole, string> = {
-          cliente: '0.00',
-          cliente_especial: '0.00',
-          revendedor: '0.00',
-          revendedor_especial: '0.00',
-          admin: '0.00',
-          programador: '0.00',
-        };
-        for (const role of ALL_ROLES) {
-          if (editingPrices[vId]?.[role] !== undefined) {
-            loadedPrices[role] = editingPrices[vId][role];
+      // Si es producto, consultar directamente la variante base y sus precios
+      if (level === 'product') {
+        const prodId = existingItem.id || existingItem.producto_id;
+        try {
+          const { data: vData } = await supabase
+            .from('variants')
+            .select('*, prices(*)')
+            .eq('producto_id', prodId)
+            .order('orden', { ascending: true })
+            .limit(1);
+
+          if (vData && vData.length > 0) {
+            const firstV = vData[0];
+            setFormQuantity(firstV.cantidad_items ? String(firstV.cantidad_items) : '0');
+            const loadedPrices: Record<UserRole, string> = {
+              cliente: '0.00',
+              cliente_especial: '0.00',
+              revendedor: '0.00',
+              revendedor_especial: '0.00',
+              admin: '0.00',
+              programador: '0.00',
+            };
+            if (firstV.prices && firstV.prices.length > 0) {
+              for (const p of firstV.prices) {
+                if (p.rol && (loadedPrices as any)[p.rol] !== undefined) {
+                  loadedPrices[p.rol as UserRole] = String(p.precio);
+                }
+              }
+              setFormEnablePrices(true);
+            } else {
+              setFormEnablePrices(false);
+            }
+            setFormVariantPrices(loadedPrices);
+            setFormBasePrice(loadedPrices.cliente || '0.00');
+          } else {
+            setFormEnablePrices(false);
           }
+        } catch (e) {
+          console.error('Error precargando precios de producto:', e);
+          setFormEnablePrices(false);
         }
-        setFormVariantPrices(loadedPrices);
-        setFormBasePrice(loadedPrices.cliente || '0.00');
-        setFormEnablePrices(true);
       } else {
         setFormEnablePrices(false);
       }
@@ -1000,7 +1022,7 @@ export default function AdminCatalogoPage() {
           </select>
           {currentVariant ? (
             <div className="flex items-center justify-between pt-2 border-t border-neon/10 text-[10px] font-mono text-ice/70">
-              <span>Cliente: <strong className="text-gold">${editingPrices[selectedVarId]?.cliente || '0.00'}</strong></span>
+              <span>Cliente: <strong className="text-gold">${editingPrices[selectedVarId]?.cliente || '0.00'} MXN</strong></span>
               <span className="text-neon-cyan">{currentVariant.cantidad_items || 0} items</span>
             </div>
           ) : (
@@ -1054,11 +1076,10 @@ export default function AdminCatalogoPage() {
                 return (
                   <div
                     key={pId}
-                    className={`p-4 rounded-xl border transition-all ${
-                      isSelected
+                    className={`p-4 rounded-xl border transition-all ${isSelected
                         ? 'bg-navy/90 border-neon-cyan shadow-[0_0_15px_rgba(0,210,255,0.25)]'
                         : 'bg-pitch/80 border-neon/20 hover:border-neon/40'
-                    } flex flex-col justify-between gap-3`}
+                      } flex flex-col justify-between gap-3`}
                   >
                     <div className="flex items-start gap-3">
                       {p.imagen_url ? (
@@ -1076,11 +1097,10 @@ export default function AdminCatalogoPage() {
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-pure text-sm truncate">{p.nombre}</h3>
                           <span
-                            className={`px-2 py-0.2 rounded-full text-[9px] font-mono uppercase font-bold shrink-0 ${
-                              p.activo !== false
+                            className={`px-2 py-0.2 rounded-full text-[9px] font-mono uppercase font-bold shrink-0 ${p.activo !== false
                                 ? 'bg-neon/15 text-neon border border-neon/30'
                                 : 'bg-magenta/15 text-magenta border border-magenta/30'
-                            }`}
+                              }`}
                           >
                             {p.activo !== false ? 'Activo' : 'Inactivo'}
                           </span>
@@ -1100,11 +1120,10 @@ export default function AdminCatalogoPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedProdId(pId)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase font-bold transition-all ${
-                          isSelected
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase font-bold transition-all ${isSelected
                             ? 'bg-neon-cyan text-pitch shadow-[0_0_10px_rgba(0,210,255,0.4)]'
                             : 'bg-pitch text-ice border border-neon/30 hover:border-neon'
-                        }`}
+                          }`}
                       >
                         {isSelected ? '✓ Seleccionado' : 'Seleccionar'}
                       </button>
@@ -1247,7 +1266,7 @@ export default function AdminCatalogoPage() {
                         {ALL_ROLES.map((role) => (
                           <div key={role} className="p-2.5 rounded-lg bg-pitch border border-neon/20">
                             <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
-                              {role.replace('_', ' ')}:
+                              {role.replace('_', ' ')} (MXN):
                             </label>
                             <div className="relative">
                               <span className="absolute left-2 top-1.5 text-gold font-mono text-xs">$</span>
@@ -1428,14 +1447,14 @@ export default function AdminCatalogoPage() {
                     <Sparkles className="w-4 h-4 text-gold" />
                     <div>
                       <h4 className="text-xs font-mono font-bold uppercase text-gold">
-                        Precios por Rol ($ USD)
+                        Precios por Rol ($ MXN - Pesos Mexicanos)
                       </h4>
                       <p className="text-[10px] font-mono text-ice/60">
                         {activeModal === 'variant'
-                          ? 'Asigna el costo del paquete para cada rol'
+                          ? 'Asigna el costo del paquete en Pesos Mexicanos (MXN) para cada rol'
                           : activeModal === 'product'
-                            ? 'Configura precios directos para este producto'
-                            : 'Configura tarifas base o sugeridas por rol'}
+                            ? 'Configura precios directos en Pesos Mexicanos (MXN)'
+                            : 'Configura tarifas base en Pesos Mexicanos (MXN)'}
                       </p>
                     </div>
                   </div>
@@ -1444,11 +1463,10 @@ export default function AdminCatalogoPage() {
                     <button
                       type="button"
                       onClick={() => setFormEnablePrices(!formEnablePrices)}
-                      className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${
-                        formEnablePrices
+                      className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${formEnablePrices
                           ? 'bg-gold text-pitch shadow-[0_0_10px_rgba(251,191,36,0.5)]'
                           : 'bg-pitch border border-neon/30 text-ice hover:text-white'
-                      }`}
+                        }`}
                     >
                       {formEnablePrices ? '✓ Activado' : '＋ Activar Precios'}
                     </button>
@@ -1460,7 +1478,7 @@ export default function AdminCatalogoPage() {
                     {/* Atajo rápido de precio base */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-pitch/90 border border-neon/20">
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[11px] font-mono text-ice">Precio Base ($):</span>
+                        <span className="text-[11px] font-mono text-ice">Precio Base ($ MXN):</span>
                         <input
                           type="number"
                           step="0.01"
@@ -1509,7 +1527,7 @@ export default function AdminCatalogoPage() {
                         return (
                           <div key={role} className="p-2 rounded-lg bg-pitch border border-neon/20">
                             <label className="block text-[10px] font-mono uppercase text-ice/80 mb-1 truncate">
-                              {label}:
+                              {label} ($ MXN):
                             </label>
                             <div className="relative">
                               <span className="absolute left-2 top-1 text-gold font-mono text-xs">$</span>
@@ -1522,8 +1540,9 @@ export default function AdminCatalogoPage() {
                                   const val = e.target.value;
                                   setFormVariantPrices((prev) => ({ ...prev, [role]: val }));
                                 }}
-                                className="w-full pl-5 pr-2 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-gold"
+                                className="w-full pl-5 pr-8 py-1 rounded bg-navy text-pure text-xs font-mono border border-neon/30 focus:outline-none focus:border-gold"
                               />
+                              <span className="absolute right-1.5 top-1 text-[9px] font-mono text-ice/40 pointer-events-none">MXN</span>
                             </div>
                           </div>
                         );
@@ -1546,11 +1565,10 @@ export default function AdminCatalogoPage() {
                 <button
                   type="button"
                   onClick={() => setFormActivo(!formActivo)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${
-                    formActivo
+                  className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase transition-all ${formActivo
                       ? 'bg-neon/20 text-neon border border-neon/40'
                       : 'bg-magenta/20 text-magenta border border-magenta/40'
-                  }`}
+                    }`}
                 >
                   {formActivo ? '✓ Activo' : '✕ Inactivo'}
                 </button>

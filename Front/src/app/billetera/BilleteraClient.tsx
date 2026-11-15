@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PaymentMethod, BalanceRecharge, Transaction } from '@/types/database.types';
 import { formatCurrency, formatDate, getOrderStatusBadge, validatePaymentReference } from '@/lib/utils';
+import { Copy, Check, AlertCircle, Sparkles } from 'lucide-react';
 
 export default function BilleteraClient() {
   const router = useRouter();
@@ -19,12 +20,20 @@ export default function BilleteraClient() {
   const [loadingData, setLoadingData] = useState(true);
 
   // Formulario de recarga
-  const [monto, setMonto] = useState<string>('5.00');
+  const [monto, setMonto] = useState<string>('100.00');
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [referencia, setReferencia] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, fieldKey: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldKey);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Tab activo: 'recargar' | 'transacciones' | 'historial_recargas'
   const [activeTab, setActiveTab] = useState<'recargar' | 'transacciones' | 'historial_recargas'>('recargar');
@@ -291,7 +300,7 @@ export default function BilleteraClient() {
             {/* Monto a recargar */}
             <div>
               <label className="block text-xs font-mono uppercase text-ice mb-2">
-                Monto a Recargar (USD) <span className="text-magenta">*</span>
+                Monto a Recargar (MXN - Pesos Mexicanos) <span className="text-magenta">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-3.5 text-gold font-mono font-bold">$</span>
@@ -300,20 +309,22 @@ export default function BilleteraClient() {
                   step="0.01"
                   min="1"
                   required
+                  placeholder="Ej: 100.00"
                   value={monto}
                   onChange={(e) => setMonto(e.target.value)}
-                  className="w-full pl-8 pr-4 py-3 rounded-xl bg-navy/90 border border-neon/30 text-pure font-mono text-sm focus:outline-none focus:border-neon"
+                  className="w-full pl-8 pr-16 py-3 rounded-xl bg-navy/90 border border-neon/30 text-pure font-mono text-sm focus:outline-none focus:border-neon"
                 />
+                <span className="absolute right-4 top-3.5 text-xs font-mono text-ice/60">MXN</span>
               </div>
-              <div className="flex gap-2 mt-2">
-                {['5.00', '10.00', '20.00', '50.00', '100.00'].map((preset) => (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {['50.00', '100.00', '200.00', '500.00', '1000.00'].map((preset) => (
                   <button
                     key={preset}
                     type="button"
                     onClick={() => setMonto(preset)}
                     className="px-3 py-1 rounded-lg bg-navy/60 border border-neon/20 text-xs font-mono text-ice hover:border-neon hover:text-white"
                   >
-                    ${preset}
+                    ${preset} MXN
                   </button>
                 ))}
               </div>
@@ -339,6 +350,122 @@ export default function BilleteraClient() {
                 })}
               </select>
             </div>
+
+            {/* DATOS OFICIALES PARA TRANSFERIR EN PESOS MEXICANOS (MXN) */}
+            {(() => {
+              const currentMethod = paymentMethods.find((m) => (m.id || m.metodo_id) === selectedMethodId);
+              if (!currentMethod) return null;
+              return (
+                <div className="p-4 rounded-2xl bg-pitch/90 border border-gold/40 shadow-[0_0_15px_rgba(251,191,36,0.15)] space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-gold/20 pb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      {currentMethod.logo_url ? (
+                        <img
+                          src={currentMethod.logo_url}
+                          alt={currentMethod.nombre_metodo}
+                          className="w-8 h-8 object-contain rounded-lg bg-navy p-1 border border-gold/30 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-navy border border-gold/30 flex items-center justify-center text-sm shrink-0">
+                          🏦
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-bold text-pure text-sm leading-tight">{currentMethod.nombre_metodo}</h4>
+                        <span className="text-[10px] font-mono text-gold flex items-center gap-1">
+                          ● Datos Oficiales para Pago en Pesos Mexicanos (MXN)
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/30 font-bold uppercase">
+                      $ MXN
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+                    {/* Monto exacto */}
+                    <div className="p-3 rounded-xl bg-navy/60 border border-neon/20 flex flex-col justify-between">
+                      <span className="text-[11px] text-ice/70 uppercase">Monto a Transferir:</span>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-base font-black text-gold">
+                          ${parseFloat(monto || '0').toFixed(2)} MXN
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(parseFloat(monto || '0').toFixed(2), 'monto')}
+                          className="px-2 py-1 rounded bg-pitch border border-gold/30 text-[10px] text-gold hover:bg-gold hover:text-pitch transition-colors flex items-center gap-1"
+                          title="Copiar monto"
+                        >
+                          {copiedField === 'monto' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedField === 'monto' ? '¡Copiado!' : 'Copiar'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Titular */}
+                    {currentMethod.titular && (
+                      <div className="p-3 rounded-xl bg-navy/60 border border-neon/20 flex flex-col justify-between">
+                        <span className="text-[11px] text-ice/70 uppercase">Titular / Beneficiario:</span>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs font-bold text-pure truncate mr-2" title={currentMethod.titular}>
+                            {currentMethod.titular}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(currentMethod.titular!, 'titular')}
+                            className="px-2 py-1 rounded bg-pitch border border-neon/30 text-[10px] text-neon hover:bg-neon hover:text-pitch transition-colors flex items-center gap-1 shrink-0"
+                            title="Copiar titular"
+                          >
+                            {copiedField === 'titular' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedField === 'titular' ? '¡Copiado!' : 'Copiar'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cuenta o CLABE */}
+                    {currentMethod.numero_cuenta_o_dato && (
+                      <div className="sm:col-span-2 p-3 rounded-xl bg-navy/80 border border-gold/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[11px] text-gold uppercase block font-bold">
+                            Número de Cuenta / CLABE / Teléfono / Dato de Pago:
+                          </span>
+                          <span className="text-sm font-mono font-black text-pure tracking-wider select-all break-all">
+                            {currentMethod.numero_cuenta_o_dato}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(currentMethod.numero_cuenta_o_dato!, 'cuenta')}
+                          className="px-3 py-1.5 rounded-lg bg-gold text-pitch font-bold text-xs uppercase hover:bg-yellow-400 transition-colors flex items-center justify-center gap-1.5 shrink-0 shadow-sm"
+                          title="Copiar dato de pago"
+                        >
+                          {copiedField === 'cuenta' ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedField === 'cuenta' ? '¡Copiado!' : 'Copiar Cuenta / CLABE'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Instrucciones */}
+                  {currentMethod.instrucciones && (
+                    <div className="p-3 rounded-xl bg-pitch border border-neon/20 text-xs font-mono">
+                      <span className="text-[11px] text-ice font-bold uppercase block mb-1">
+                        Instrucciones de Transferencia & Concepto:
+                      </span>
+                      <p className="text-ice/90 leading-relaxed whitespace-pre-line text-[11px]">
+                        {currentMethod.instrucciones}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="text-[10px] font-mono text-ice/70 flex items-center gap-1.5 pt-1">
+                    <span>⚠️</span>
+                    <span>Realiza la transferencia en <strong>Pesos Mexicanos (MXN)</strong> por el monto exacto, copia la referencia bancaria y adjunta el comprobante abajo.</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Número o código de referencia */}
             <div>

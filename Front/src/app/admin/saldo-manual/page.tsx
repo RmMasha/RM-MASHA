@@ -122,8 +122,8 @@ export default function AdminSaldoManualPage() {
       {feedback && (
         <div
           className={`p-4 rounded-xl text-xs font-mono flex items-center justify-between ${feedback.type === 'success'
-              ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
-              : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
+            ? 'bg-neon/15 border border-neon text-pure shadow-[0_0_15px_rgba(0,210,255,0.3)]'
+            : 'bg-magenta/15 border border-magenta text-pure shadow-[0_0_15px_rgba(255,0,127,0.3)]'
             }`}
         >
           <div className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export default function AdminSaldoManualPage() {
 
             <div>
               <label className="block text-xs font-mono uppercase text-ice mb-1">
-                Monto (USD):
+                Monto ($ MXN):
               </label>
               <input
                 type="number"
@@ -190,6 +190,7 @@ export default function AdminSaldoManualPage() {
                 required
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
+                placeholder="Ej: 100.00"
                 className="w-full px-3 py-2.5 rounded-xl bg-pitch border border-neon/30 text-pure text-xs font-mono focus:outline-none focus:border-neon"
               />
             </div>
@@ -250,8 +251,8 @@ export default function AdminSaldoManualPage() {
                     key={u.id}
                     onClick={() => setSelectedUserId(u.id)}
                     className={`p-3.5 rounded-xl border text-xs font-mono cursor-pointer transition-all flex items-center justify-between ${isSelected
-                        ? 'border-gold bg-gold/15 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
-                        : 'border-neon/15 bg-navy/50 hover:border-ice/40 hover:bg-navy/80'
+                      ? 'border-gold bg-gold/15 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                      : 'border-neon/15 bg-navy/50 hover:border-ice/40 hover:bg-navy/80'
                       }`}
                   >
                     <div>
