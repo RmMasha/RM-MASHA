@@ -263,11 +263,10 @@ export default function AdminIntroPage() {
               Estado de la Intro
             </h3>
             <span
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                introActivo
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${introActivo
                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                   : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-              }`}
+                }`}
             >
               {introActivo ? 'ACTIVADA' : 'DESACTIVADA'}
             </span>
@@ -282,11 +281,10 @@ export default function AdminIntroPage() {
         <button
           type="button"
           onClick={() => setIntroActivo(!introActivo)}
-          className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider border transition-all flex items-center gap-2 ${
-            introActivo
+          className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider border transition-all flex items-center gap-2 ${introActivo
               ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
               : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
-          }`}
+            }`}
         >
           <Power className="w-4 h-4" />
           <span>{introActivo ? 'Desactivar Intro' : 'Activar Intro'}</span>
@@ -317,11 +315,10 @@ export default function AdminIntroPage() {
               <button
                 type="button"
                 onClick={togglePlayAudioPreview}
-                className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 transition-all ${
-                  isPlayingAudio
+                className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 transition-all ${isPlayingAudio
                     ? 'bg-magenta/20 text-magenta border-magenta/40 animate-pulse'
                     : 'bg-neon-blue/20 text-neon-cyan border-neon-blue/40 hover:bg-neon-blue/30'
-                }`}
+                  }`}
               >
                 {isPlayingAudio ? (
                   <>
@@ -396,7 +393,7 @@ export default function AdminIntroPage() {
               <img
                 src={introImagenUrl}
                 alt="Vinilo Preview"
-                className="w-full h-full object-cover rounded-full animate-vinyl-spin select-none"
+                className="w-full h-full object-cover rounded-full animate-vinyl-spin select-none scale-[1.14]"
                 style={{ clipPath: 'circle(50% at 50% 50%)' }}
                 onError={(e) => {
                   const target = e.currentTarget;
@@ -461,11 +458,11 @@ export default function AdminIntroPage() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-magenta/10 rounded-full blur-[110px] pointer-events-none" />
 
           <div className="relative z-10 flex flex-col items-center justify-center p-4">
-            <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[400px] lg:h-[400px] rounded-full overflow-hidden shadow-[0_0_50px_rgba(255,0,128,0.35),0_0_80px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
+            <div className="relative w-52 h-52 sm:w-60 sm:h-60 md:w-64 md:h-64 lg:w-72 lg:h-72 max-w-[75vw] max-h-[36vh] aspect-square rounded-full overflow-hidden shadow-[0_0_45px_rgba(255,0,128,0.4),0_0_75px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
               <img
                 src={introImagenUrl}
                 alt="RM & MASHA Vinilo Live Preview"
-                className="w-full h-full object-cover rounded-full pointer-events-none select-none animate-vinyl-spin"
+                className="w-full h-full object-cover rounded-full pointer-events-none select-none scale-[1.14] animate-vinyl-spin"
                 style={{ clipPath: 'circle(50% at 50% 50%)' }}
                 onError={(e) => {
                   const target = e.currentTarget;

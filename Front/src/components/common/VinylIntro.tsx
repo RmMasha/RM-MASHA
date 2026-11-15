@@ -72,13 +72,13 @@ export default function VinylIntro({ children }: VinylIntroProps) {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.14)_0%,rgba(7,11,25,0.96)_65%,#050811_100%)] pointer-events-none" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-magenta/10 rounded-full blur-[110px] pointer-events-none" />
 
-        {/* Contenedor Principal del Vinilo Mejorado para PC y Móvil */}
+        {/* Contenedor Principal del Vinilo Mejorado para PC y Móvil (Tamaño compacto y centrado) */}
         <div className="relative z-10 flex flex-col items-center justify-center p-4">
-          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[400px] lg:h-[400px] rounded-full overflow-hidden shadow-[0_0_50px_rgba(255,0,128,0.35),0_0_80px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
+          <div className="relative w-52 h-52 sm:w-60 sm:h-60 md:w-64 md:h-64 lg:w-72 lg:h-72 max-w-[75vw] max-h-[36vh] aspect-square rounded-full overflow-hidden shadow-[0_0_45px_rgba(255,0,128,0.4),0_0_75px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
             <img
               src={vinylSrc}
               alt="RM & MASHA Vinilo"
-              className="w-full h-full object-cover rounded-full pointer-events-none select-none animate-vinyl-spin"
+              className="w-full h-full object-cover rounded-full pointer-events-none select-none scale-[1.14] animate-vinyl-spin"
               style={{ clipPath: 'circle(50% at 50% 50%)' }}
               onError={(e) => {
                 // Fallback en caso de caracteres especiales de URL
