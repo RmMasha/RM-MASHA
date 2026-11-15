@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppearance } from '@/context/AppearanceContext';
 
 interface VinylIntroProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export default function VinylIntro({ children }: VinylIntroProps) {
@@ -33,7 +33,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
         const audio = new Audio(audioSrc);
         audioRef.current = audio;
         audio.play().catch((error) => {
-          console.warn('Autoplay bloqueado por políticas del navegador o archivo no disponible:', error);
+          console.warn('Autoplay de audio restringido por el navegador:', error);
         });
       } catch (error) {
         console.warn('Error al instanciar el audio de la intro:', error);
@@ -42,65 +42,164 @@ export default function VinylIntro({ children }: VinylIntroProps) {
 
     // Iniciar temporizador de exactamente 5 segundos (5000 ms)
     const timer = setTimeout(() => {
-      // Pasados los 5 segundos, el estado se actualiza para desmontar la interfaz visual del vinilo
-      // y renderizar en su lugar el {children} del componente.
+      // Pasados los 5 segundos, desmontar la interfaz visual del vinilo
       setShowVisual(false);
-      // CRÍTICO: Cuando se desmonta la interfaz visual a los 5 segundos,
-      // NO pausamos ni destruimos la instancia del audio (audioRef.current).
-      // La música continúa sonando en segundo plano hasta que finalice naturalmente.
+      // CRÍTICO: NO pausar ni destruir audioRef.current.
+      // La música continúa sonando en segundo plano hasta que termine.
     }, 5000);
 
     return () => {
-      // Limpiar únicamente el temporizador en la función de limpieza
+      // Limpiar únicamente el temporizador
       clearTimeout(timer);
     };
   }, [loading, isIntroEnabled, audioSrc]);
 
-  // Si la intro visual está activa y no está deshabilitada, renderizar la pantalla del vinilo con el fondo de la tienda
-  if (showVisual && isIntroEnabled) {
-    return (
-      <div
-        className="fixed inset-0 z-[9999] bg-[#050811] flex flex-col items-center justify-center select-none overflow-hidden cursor-pointer"
-        onClick={() => {
-          // Permite activar el audio con clic de usuario si el navegador bloqueó el autoplay
-          if (audioRef.current && audioRef.current.paused) {
-            audioRef.current.play().catch(() => {});
-          }
-        }}
-      >
-        {/* Fondo oficial por defecto de la página: atmósfera azul marino profundo con resplandores neón */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,210,255,0.14)_0%,rgba(7,11,25,0.96)_65%,#050811_100%)] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-magenta/10 rounded-full blur-[110px] pointer-events-none" />
+  return (
+    <>
+      {/* Pantalla de introducción visual temporal: fija, compacta y centrada */}
+      {showVisual && isIntroEnabled && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 999999,
+            backgroundColor: '#050811',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            userSelect: 'none',
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            // Activar audio si el navegador bloqueó el autoplay
+            if (audioRef.current && audioRef.current.paused) {
+              audioRef.current.play().catch(() => {});
+            }
+          }}
+        >
+          {/* Fondo oficial de la tienda: radial degradado ciber-neón */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(ellipse at 50% 40%, rgba(0, 210, 255, 0.12) 0%, rgba(7, 11, 25, 0.96) 65%, #050811 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '450px',
+              height: '450px',
+              backgroundColor: 'rgba(255, 0, 127, 0.08)',
+              borderRadius: '9999px',
+              filter: 'blur(100px)',
+              pointerEvents: 'none',
+            }}
+          />
 
-        {/* Contenedor Principal del Vinilo Mejorado para PC y Móvil (Tamaño compacto y centrado) */}
-        <div className="relative z-10 flex flex-col items-center justify-center p-4">
-          <div className="relative w-52 h-52 sm:w-60 sm:h-60 md:w-64 md:h-64 lg:w-72 lg:h-72 max-w-[75vw] max-h-[36vh] aspect-square rounded-full overflow-hidden shadow-[0_0_45px_rgba(255,0,128,0.4),0_0_75px_rgba(0,210,255,0.2)] border-2 border-magenta/40 flex items-center justify-center bg-[#060913] shrink-0">
-            <img
-              src={vinylSrc}
-              alt="RM & MASHA Vinilo"
-              className="w-full h-full object-cover rounded-full pointer-events-none select-none scale-[1.14] animate-vinyl-spin"
-              style={{ clipPath: 'circle(50% at 50% 50%)' }}
-              onError={(e) => {
-                // Fallback en caso de caracteres especiales de URL
-                const target = e.currentTarget;
-                if (target.src !== encodeURI(vinylSrc)) {
-                  target.src = encodeURI(vinylSrc);
-                }
+          {/* Contenedor del Vinilo: Tamaño compacto (230px), centrado y sin bordes blancos */}
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+            }}
+          >
+            <div
+              style={{
+                width: '230px',
+                height: '230px',
+                maxWidth: '65vw',
+                maxHeight: '34vh',
+                aspectRatio: '1 / 1',
+                borderRadius: '9999px',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid rgba(255, 0, 127, 0.45)',
+                boxShadow: '0 0 45px rgba(255, 0, 128, 0.4), 0 0 70px rgba(0, 210, 255, 0.2)',
+                backgroundColor: '#060913',
+                flexShrink: 0,
+                margin: '0 auto',
               }}
-            />
-          </div>
+            >
+              <img
+                src={vinylSrc}
+                alt="RM & MASHA Vinilo"
+                width={230}
+                height={230}
+                className="animate-vinyl-spin"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '9999px',
+                  transform: 'scale(1.15)',
+                  clipPath: 'circle(48% at 50% 50%)',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src !== encodeURI(vinylSrc)) {
+                    target.src = encodeURI(vinylSrc);
+                  }
+                }}
+              />
+            </div>
 
-          {/* Sutil insignia de bienvenida */}
-          <div className="mt-6 flex items-center gap-2 px-4 py-1.5 rounded-full bg-pitch-panel/90 border border-neon-blue/30 backdrop-blur-md shadow-neon-border text-xs font-mono text-ice/90 animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-neon-cyan animate-ping" />
-            <span className="tracking-widest uppercase text-[11px] font-bold">RM & MASHA • INICIANDO</span>
+            {/* Insignia compacta de carga */}
+            <div
+              style={{
+                marginTop: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 16px',
+                borderRadius: '9999px',
+                backgroundColor: 'rgba(6, 9, 19, 0.85)',
+                border: '1px solid rgba(0, 210, 255, 0.3)',
+                color: '#7DD3FC',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+              }}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#00F0FF',
+                  boxShadow: '0 0 8px #00F0FF',
+                }}
+              />
+              <span>RM & MASHA • INICIANDO</span>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // Pasados los 5 segundos o si está desactivada, renderizar en su lugar el {children}
-  return <>{children}</>;
+      {/* Contenido normal de la aplicación (se renderiza debajo y queda visible al culminar los 5s) */}
+      {children}
+    </>
+  );
 }
-
