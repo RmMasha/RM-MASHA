@@ -20,8 +20,8 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   const isIntroEnabled = settings.intro_activo !== false;
 
   // Fuente de audio:
-  // Si la pista configurada en Supabase es la pista de la marca (intro_audio_1794764578008.mp3) o está vacía,
-  // se utiliza la copia local /intro.mp3 (157 KB idéntica) que carga con 0 ms de latencia instantánea.
+  // Si la pista configurada en Supabase es la pista predeterminada de 157 KB o está vacía,
+  // se utiliza la copia local /intro.mp3 (idéntica) que carga con 0 ms de latencia instantánea.
   // Si en el panel admin se configuró una URL externa distinta, se usa esa URL con fallback a /intro.mp3.
   const configuredAudio = settings.intro_audio_url;
   const isDefaultOrLocal =
@@ -34,7 +34,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   const durationSec = Math.max(1, Math.min(30, Number(settings.intro_duracion_segundos) || 12));
 
   // =========================================================================
-  // LIMPIEZA DE EVENT LISTENERS DE GESTO DEL USUARIO
+  // LIMPIEZA DE EVENT LISTENERS DE GESTO
   // =========================================================================
   const detachListeners = useCallback(() => {
     if (listenersCleanedRef.current) return;
@@ -45,32 +45,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
     window.removeEventListener('keydown', handleUserInteraction, true);
   }, []);
 
-  // =========================================================================
-  // INTENTO DE REPRODUCCIÓN AUTOMÁTICA
-  // =========================================================================
-  const attemptPlay = useCallback(() => {
-    if (hasStartedPlaybackRef.current) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.volume = 1.0;
-    audio.loop = false; // Solo debe reproducirse 1 vez
-
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          hasStartedPlaybackRef.current = true;
-          detachListeners();
-        })
-        .catch(() => {
-          // Si el navegador bloquea la reproducción sin interacción previa (Autoplay Policy),
-          // los listeners globales capturarán el primer clic o toque en la pantalla para iniciarla.
-        });
-    }
-  }, [detachListeners]);
-
-  // Gestor de interacción: cualquier toque, clic o pulsación arranca el audio al instante
+  // Gestor de interacción de respaldo: cualquier toque, clic o pulsación arranca el audio al instante
   const handleUserInteraction = useCallback(() => {
     if (hasStartedPlaybackRef.current) return;
     const audio = audioRef.current;
@@ -83,9 +58,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
           hasStartedPlaybackRef.current = true;
           detachListeners();
         })
-        .catch(() => {
-          // Si por alguna razón falla, se mantienen los listeners para el siguiente toque
-        });
+        .catch(() => {});
     }
   }, [detachListeners]);
 
@@ -110,51 +83,49 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   }, [detachListeners]);
 
   // =========================================================================
-  // 1. INICIALIZACIÓN DEL OBJETO AUDIO Y REPRODUCCIÓN AUTOMÁTICA
+  // 1. REPRODUCCIÓN AUTOMÁTICA EN FRAME 0 (SIN INTERRUMPIR CON .LOAD())
   // =========================================================================
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!isIntroEnabled) return;
 
-    listenersCleanedRef.current = false;
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    // Instanciar o actualizar la pista de Audio usando useRef para evitar duplicados en Strict Mode
-    if (!audioRef.current) {
-      const audio = new Audio(audioSrc);
-      audio.volume = 1.0;
-      audio.loop = false;
-      audio.preload = 'auto';
+    audio.volume = 1.0;
+    audio.loop = false; // Solo 1 vez
 
-      audio.onerror = () => {
-        // En caso de error de red con la URL remota, rescate inmediato con la pista local
-        if (audio.src !== window.location.origin + '/intro.mp3') {
-          audio.src = '/intro.mp3';
-          audio.load();
-          if (hasStartedPlaybackRef.current) {
-            audio.play().catch(() => {});
-          }
-        }
-      };
-
-      audioRef.current = audio;
-    } else if (audioRef.current.src !== audioSrc && !hasStartedPlaybackRef.current) {
-      audioRef.current.src = audioSrc;
-      audioRef.current.load();
+    // Si ya está reproduciendo gracias a autoPlay nativo del navegador
+    if (!audio.paused) {
+      hasStartedPlaybackRef.current = true;
+      detachListeners();
+      return;
     }
 
-    // Intentar reproducción automática de inmediato en el frame 0
-    attemptPlay();
+    // Intentar forzar la reproducción automática inmediata por script
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          hasStartedPlaybackRef.current = true;
+          detachListeners();
+        })
+        .catch(() => {
+          // El navegador bloqueó autoplay por política de seguridad (ej. primera carga sin permiso en localhost).
+          // Se dejan los listeners globales activos para iniciar en el primer gesto natural.
+        });
+    }
 
-    // Activar listeners globales con fase de captura para arrancar con el primer clic/toque en cualquier parte
-    window.addEventListener('pointerdown', handleUserInteraction, true);
-    window.addEventListener('touchstart', handleUserInteraction, true);
-    window.addEventListener('click', handleUserInteraction, true);
-    window.addEventListener('keydown', handleUserInteraction, true);
+    // Listeners globales en fase de captura como respaldo
+    window.addEventListener('pointerdown', handleUserInteraction, { capture: true, passive: true });
+    window.addEventListener('touchstart', handleUserInteraction, { capture: true, passive: true });
+    window.addEventListener('click', handleUserInteraction, { capture: true, passive: true });
+    window.addEventListener('keydown', handleUserInteraction, { capture: true, passive: true });
 
     return () => {
       detachListeners();
     };
-  }, [audioSrc, isIntroEnabled, attemptPlay, handleUserInteraction, detachListeners]);
+  }, [audioSrc, isIntroEnabled, detachListeners, handleUserInteraction]);
 
   // =========================================================================
   // 2. TEMPORIZADOR DE LA INTRO (DURACIÓN CONFIGURADA EN ADMIN)
@@ -197,6 +168,29 @@ export default function VinylIntro({ children }: VinylIntroProps) {
 
   return (
     <>
+      {/* ========================================================================= */}
+      {/* ELEMENTO DE AUDIO NATIVO Y PERSISTENTE:                                   */}
+      {/* Vive fuera de showVisual para que al ocultarse la intro siga sonando.     */}
+      {/* Cuenta con autoPlay nativo del navegador y detección onPlay automática.   */}
+      {/* ========================================================================= */}
+      <audio
+        ref={audioRef}
+        src={audioSrc}
+        autoPlay
+        playsInline
+        preload="auto"
+        onPlay={() => {
+          hasStartedPlaybackRef.current = true;
+          detachListeners();
+        }}
+        onError={() => {
+          if (audioRef.current && audioRef.current.src !== window.location.origin + '/intro.mp3') {
+            audioRef.current.src = '/intro.mp3';
+            audioRef.current.play().catch(() => {});
+          }
+        }}
+      />
+
       {/* ========================================================================= */}
       {/* PANTALLA DE INTRODUCCIÓN VISUAL TEMPORAL: FIJA, CENTRADA Y CON BOTÓN SALTAR */}
       {/* ========================================================================= */}
