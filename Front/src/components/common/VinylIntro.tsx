@@ -10,6 +10,7 @@ interface VinylIntroProps {
 export default function VinylIntro({ children }: VinylIntroProps) {
   const { settings, loading } = useAppearance();
   const [showVisual, setShowVisual] = useState(true);
+  const [hasAudioStarted, setHasAudioStarted] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,7 +46,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
     window.removeEventListener('keydown', handleUserInteraction, true);
   }, []);
 
-  // Gestor de interacción de respaldo: cualquier toque, clic o pulsación arranca el audio al instante
+  // Gestor de interacción: cualquier toque, clic o pulsación arranca el audio al instante
   const handleUserInteraction = useCallback(() => {
     if (hasStartedPlaybackRef.current) return;
     const audio = audioRef.current;
@@ -56,6 +57,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
       playPromise
         .then(() => {
           hasStartedPlaybackRef.current = true;
+          setHasAudioStarted(true);
           detachListeners();
         })
         .catch(() => {});
@@ -63,12 +65,13 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   }, [detachListeners]);
 
   // =========================================================================
-  // BOTÓN SALTAR INTRO (ÚNICO BOTÓN VISIBLE EN LA PANTALLA)
+  // BOTÓN SALTAR INTRO (ÚNICO BOTÓN VISIBLE EN LA ESQUINA)
   // =========================================================================
   const handleSkip = useCallback(() => {
     // Si aún no arrancó la música, este clic garantiza que inicie
     if (!hasStartedPlaybackRef.current && audioRef.current) {
       hasStartedPlaybackRef.current = true;
+      setHasAudioStarted(true);
       audioRef.current.play().catch(() => {});
     }
 
@@ -83,7 +86,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
   }, [detachListeners]);
 
   // =========================================================================
-  // 1. REPRODUCCIÓN AUTOMÁTICA EN FRAME 0 (SIN INTERRUMPIR CON .LOAD())
+  // 1. REPRODUCCIÓN AUTOMÁTICA EN FRAME 0 (INTENTO DIRECTO EN EL NAVEGADOR)
   // =========================================================================
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -98,6 +101,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
     // Si ya está reproduciendo gracias a autoPlay nativo del navegador
     if (!audio.paused) {
       hasStartedPlaybackRef.current = true;
+      setHasAudioStarted(true);
       detachListeners();
       return;
     }
@@ -108,15 +112,15 @@ export default function VinylIntro({ children }: VinylIntroProps) {
       playPromise
         .then(() => {
           hasStartedPlaybackRef.current = true;
+          setHasAudioStarted(true);
           detachListeners();
         })
         .catch(() => {
-          // El navegador bloqueó autoplay por política de seguridad (ej. primera carga sin permiso en localhost).
-          // Se dejan los listeners globales activos para iniciar en el primer gesto natural.
+          // Bloqueo normal de autoplay en dispositivos móviles hasta el primer toque del usuario
         });
     }
 
-    // Listeners globales en fase de captura como respaldo
+    // Listeners globales en fase de captura para arrancar con el primer toque en pantalla
     window.addEventListener('pointerdown', handleUserInteraction, { capture: true, passive: true });
     window.addEventListener('touchstart', handleUserInteraction, { capture: true, passive: true });
     window.addEventListener('click', handleUserInteraction, { capture: true, passive: true });
@@ -181,6 +185,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
         preload="auto"
         onPlay={() => {
           hasStartedPlaybackRef.current = true;
+          setHasAudioStarted(true);
           detachListeners();
         }}
         onError={() => {
@@ -322,6 +327,7 @@ export default function VinylIntro({ children }: VinylIntroProps) {
                 backgroundColor: '#060913',
                 flexShrink: 0,
                 margin: '0 auto',
+                cursor: 'pointer',
               }}
             >
               <img
@@ -348,23 +354,34 @@ export default function VinylIntro({ children }: VinylIntroProps) {
               />
             </div>
 
-            {/* Insignia de bienvenida */}
+            {/* ========================================================================= */}
+            {/* INSIGNIA INTERACTIVA CENTRAL: "TOCAR PARA INICIAR"                        */}
+            {/* ========================================================================= */}
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                handleUserInteraction();
+              }}
               style={{
                 marginTop: '22px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '6px 18px',
+                padding: '8px 22px',
                 borderRadius: '9999px',
-                backgroundColor: 'rgba(6, 9, 19, 0.9)',
-                border: '1px solid rgba(0, 210, 255, 0.35)',
-                color: '#7DD3FC',
+                backgroundColor: hasAudioStarted ? 'rgba(6, 9, 19, 0.9)' : 'rgba(12, 18, 38, 0.95)',
+                border: hasAudioStarted ? '1px solid rgba(0, 210, 255, 0.35)' : '1.5px solid rgba(0, 210, 255, 0.7)',
+                color: hasAudioStarted ? '#7DD3FC' : '#FFFFFF',
                 fontFamily: 'monospace',
                 fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                boxShadow: '0 0 15px rgba(0, 210, 255, 0.2)',
+                fontWeight: 800,
+                letterSpacing: '1.2px',
+                boxShadow: hasAudioStarted
+                  ? '0 0 15px rgba(0, 210, 255, 0.2)'
+                  : '0 0 25px rgba(0, 210, 255, 0.45), inset 0 0 10px rgba(0, 210, 255, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                userSelect: 'none',
               }}
             >
               <span
@@ -372,11 +389,14 @@ export default function VinylIntro({ children }: VinylIntroProps) {
                   width: '8px',
                   height: '8px',
                   borderRadius: '9999px',
-                  backgroundColor: '#00F0FF',
-                  boxShadow: '0 0 10px #00F0FF',
+                  backgroundColor: hasAudioStarted ? '#00F0FF' : '#FF007F',
+                  boxShadow: hasAudioStarted ? '0 0 10px #00F0FF' : '0 0 10px #FF007F',
                 }}
               />
-              <span>RM & MASHA • INICIANDO</span>
+              <span>{hasAudioStarted ? 'RM & MASHA • REPRODUCIENDO' : 'TOCAR PARA INICIAR'}</span>
+              {!hasAudioStarted && (
+                <span style={{ color: '#00F0FF', fontSize: '12px', lineHeight: 1 }}>▶</span>
+              )}
             </div>
           </div>
         </div>
